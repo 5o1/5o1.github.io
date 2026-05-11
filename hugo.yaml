@@ -1,5 +1,5 @@
 baseURL: "https://5o1.github.io/"
-title: 5o1's Blog
+title: Funclogic
 paginate: 5
 theme: PaperMod
 
@@ -14,8 +14,8 @@ minify:
 
 params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
-  title: ExampleSite
-  description: "ExampleSite description"
+  title: Funclogic
+  description: "This is a tiny blog."
   keywords: [Blog, Portfolio, PaperMod]
   author: Me
   # author: ["Me", "You"] # multiple authors
@@ -50,14 +50,14 @@ params:
     safari_pinned_tab: "/safari-pinned-tab.svg"
 
   label:
-    text: "5o1's Blog"
+    text: "Funclogic"
     icon: /apple-touch-icon.png
     iconHeight: 35
 
   # profile-mode
   profileMode:
     enabled: false # needs to be explicitly set
-    title: 5o1's Blog
+    title: Funclogic
     subtitle: ""
     imageUrl: "<img location>"
     imageWidth: 120
