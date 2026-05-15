@@ -3,3 +3,9 @@ This is just a placeholder blank stylesheet so as to support adding custom style
 
 Read https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#bundling-custom-css-with-themes-assets for more info
 */
+
+.md-content p a > img[src*="img.shields.io/badge/"] {
+	display: inline-block;
+	margin: 0 0.45rem 0.45rem 0;
+	vertical-align: middle;
+}

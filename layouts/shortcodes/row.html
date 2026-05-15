@@ -1,3 +1,31 @@
-<div style="display: flex; justify-content: center; align-items: center; gap: 40px; flex-wrap: wrap;">
-  {{ .Inner }}
+<style>
+  .row-text-wrap::after {
+    content: "";
+    display: block;
+    clear: both;
+  }
+
+  .row-text-wrap p:first-child img {
+    float: right;
+    margin: 0 0 1rem 1.25rem;
+    max-width: min(250px, 40%);
+  }
+
+  .row-text-wrap p:first-child img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .row-text-wrap p:first-child img {
+      float: none;
+      margin: 0 auto 1rem;
+      max-width: min(260px, 100%);
+    }
+  }
+</style>
+
+<div class="row-text-wrap">
+  {{ .Inner | .Page.RenderString }}
 </div>
