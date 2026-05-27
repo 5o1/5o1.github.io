@@ -1,0 +1,112 @@
+body[data-list-view="cards"] .post-entry.cover-side {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--gap);
+    padding: var(--gap);
+    isolation: isolate;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side.cover-left {
+    flex-direction: row;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side.cover-right {
+    flex-direction: row-reverse;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side .entry-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side .entry-cover {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 var(--entry-cover-width, 240px);
+    width: var(--entry-cover-width, 240px);
+    aspect-ratio: var(--entry-cover-ratio, 16 / 9);
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 0.75);
+    background: var(--code-bg);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+body[data-list-view="cards"] .post-entry.cover-side .entry-cover > a,
+body[data-list-view="cards"] .post-entry.cover-side .entry-cover > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side .entry-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    border-radius: 0;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.post-single .entry-cover {
+    margin: var(--gap) 0;
+    width: 100%;
+    aspect-ratio: var(--entry-cover-single-ratio, 21 / 9);
+    display: block;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 0.75);
+    background: var(--code-bg);
+}
+
+.post-single .entry-cover > a,
+.post-single .entry-cover > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.post-single .entry-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    border-radius: 0;
+}
+
+body[data-list-view="cards"] .post-entry.cover-side .entry-header,
+body[data-list-view="cards"] .post-entry.cover-side .entry-content,
+body[data-list-view="cards"] .post-entry.cover-side .entry-footer {
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+}
+
+body[data-list-view="cards"] .post-entry .entry-link {
+    z-index: 2;
+}
+
+@media screen and (max-width: 768px) {
+    body[data-list-view="cards"] .post-entry.cover-side {
+        flex-direction: column;
+    }
+
+    body[data-list-view="cards"] .post-entry.cover-side .entry-cover {
+        width: 100%;
+        aspect-ratio: var(--entry-cover-ratio, 16 / 9);
+    }
+}

@@ -41,7 +41,7 @@ cover:
 {{< /row >}}
 
 [![Email](https://img.shields.io/badge/Email-liyuyang@shanghaitech.edu.cn-blue?style=flat-square&logo=gmail)](mailto:liyuyang@shanghaitech.edu.cn)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin)](#)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/yuyang-li-04198939b/)
 [![GitHub](https://img.shields.io/badge/GitHub-5o1-black?style=flat-square&logo=github)](https://github.com/5o1)
 
 ---

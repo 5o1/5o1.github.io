@@ -12,10 +12,42 @@ languages:
     label: "English"
     locale: "en-US"
     weight: 1
+    params:
+      editPost:
+        Text: "Edit"
+      code:
+        aliases: &code_aliases
+          py: Python
+          python: Python
+          js: JavaScript
+          javascript: JavaScript
+          ts: TypeScript
+          typescript: TypeScript
+          sh: Shell
+          bash: Shell
+          html: HTML
+          css: CSS
+          json: JSON
+          yml: YAML
+          yaml: YAML
+          cpp: C++
+          c: C
+          java: Java
+          rb: Ruby
+          go: Go
+          rs: Rust
+          rust: Rust
+        copyButtonText: Copy
   zh:
     label: "中文"
     locale: "zh-CN"
     weight: 2
+    params:
+      editPost:
+        Text: "编辑"
+      code:
+        aliases: *code_aliases
+        copyButtonText: 复制
 
 enableRobotsTXT: true
 buildDrafts: false
@@ -109,10 +141,20 @@ params:
     hidden: true # hide everywhere but not in structured data
     hiddenInList: true # hide on list pages and home
     hiddenInSingle: true # hide on single page
+    pages:
+      projects/torchextractx:
+        image: "cover.png"
+        hiddenInSingle: false
+        hiddenInList: false
+        listLayout: "side"
+        singleLayout: "strip"
+        position: "right"
+        width: "240px"
+        aspectRatio: "16 / 9"
+        singleAspectRatio: "28 / 9"
 
   editPost:
     URL: "https://github.com/5o1/5o1.github.io/edit/hugo/content"
-    Text: "Suggest Changes" # edit text
     appendFilePath: true # to append file path to Edit link
 
   # for search

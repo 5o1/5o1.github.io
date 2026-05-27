@@ -1,0 +1,68 @@
+{{/*
+  Render hook for code fences.
+  - Shows a title bar with language (left) and a copy button (right).
+  - Language aliases are read from the current language's params in `hugo.yaml`.
+  - Copy button label is read from the current language's params in `hugo.yaml`.
+  - A small inline script (guarded) handles copy-to-clipboard and UI feedback.
+*/}}
+{{- $page := .Page -}}
+{{- $lang := lower .Type -}}
+{{- $langParams := $page.Site.Language.Params -}}
+{{- $aliases := index $langParams "code" "aliases" -}}
+{{- $copyLabel := index $langParams "code" "copyButtonText" | default "Copy" -}}
+{{- $label := .Type -}}
+{{- if $aliases -}}
+  {{- $alias := index $aliases $lang -}}
+  {{- if $alias -}}
+    {{- $label = $alias -}}
+  {{- end -}}
+{{- end -}}
+{{- $result := transform.HighlightCodeBlock . -}}
+
+<div class="code-block">
+  <div class="code-block__header">
+    <div class="code-block__lang">
+      {{- if $label -}}{{ $label }}{{- else -}}Code{{- end -}}
+    </div>
+    <button type="button" class="code-block__copy" aria-label="{{ $copyLabel }}" data-copied-text="{{ $copyLabel }}">
+      <span class="code-block__copy-icon" aria-hidden="true"></span>
+      <span class="code-block__copy-label">{{ $copyLabel }}</span>
+    </button>
+  </div>
+  <div class="code-block__inner">{{ $result.Wrapped }}</div>
+</div>
+
+{{/* Inline copy script (only once). It finds nearest `.code-block__inner code` and copies its textContent. */}}
+<script id="hugo-code-copy-script">(function(){
+  if (window.__hugoCodeCopyInstalled) return; window.__hugoCodeCopyInstalled = true;
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest && e.target.closest('.code-block__copy');
+    if(!btn) return;
+    var block = btn.closest('.code-block');
+    if(!block) return;
+    var codeEl = block.querySelector('pre code');
+    if(!codeEl) codeEl = block.querySelector('code');
+    if(!codeEl) return;
+    var text = codeEl.textContent || '';
+    if(!navigator.clipboard){
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly',''); ta.style.position='absolute'; ta.style.left='-9999px'; document.body.appendChild(ta);
+      var sel = document.getSelection(); var range = document.createRange(); range.selectNodeContents(ta); sel.removeAllRanges(); sel.addRange(range);
+      try{ document.execCommand('copy'); }catch(err){}
+      sel.removeAllRanges(); document.body.removeChild(ta);
+      showCopied(btn);
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function(){ showCopied(btn); }, function(){ showCopied(btn); });
+  }, false);
+
+  function showCopied(btn){
+    var label = btn.querySelector('.code-block__copy-label');
+    var original = label ? label.textContent : '';
+    if (label) label.textContent = btn.getAttribute('data-copied-text') || 'Copied';
+    btn.classList.add('code-block__copy--done');
+    setTimeout(function(){
+      if (label) label.textContent = original;
+      btn.classList.remove('code-block__copy--done');
+    }, 1500);
+  }
+})();</script>

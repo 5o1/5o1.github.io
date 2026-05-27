@@ -1,0 +1,63 @@
+{{- with .cxt}} {{/* Apply proper context from dict */}}
+{{- $coverConfig := $.Cover | default dict }}
+{{- $coverImage := (index $coverConfig "image" | default .Params.cover.image) }}
+{{- $coverAlt := (index $coverConfig "alt" | default "") }}
+{{- $coverCaption := (index $coverConfig "caption" | default "") }}
+{{- if (and $coverImage (not $.isHidden)) }}
+<figure class="entry-cover">
+    {{- $loading := cond $.IsSingle "eager" "lazy" }}
+    {{- $addLink := (and (index $coverConfig "linkFullImages" | default site.Params.cover.linkFullImages) $.IsSingle) }}
+    {{- $prod := (hugo.IsProduction | or (eq site.Params.env "production")) }}
+    {{- $responsiveImages := (index $coverConfig "responsiveImages" | default site.Params.cover.responsiveImages) | default true }}
+
+    {{- $pageBundleCover := (.Resources.ByType "image").GetMatch (printf "*%s*" $coverImage) }}
+    {{- $globalResourcesCover := (resources.ByType "image").GetMatch (printf "*%s*" $coverImage) }}
+    {{- $cover := (or $pageBundleCover $globalResourcesCover) }}
+
+    {{- $sizes := (slice "360" "480" "720" "1080" "1500") }}
+    {{- $processableFormats := (slice "jpg" "jpeg" "png" "tif" "bmp" "gif") -}}
+    {{- if hugo.IsExtended -}}
+        {{- $processableFormats = $processableFormats | append "webp" -}}
+    {{- end -}}
+
+    {{- $imgdl := $coverImage | absURL }}
+    {{- if $cover -}}
+        {{- $imgdl = $cover.RelPermalink }}
+    {{- end -}}
+
+    {{- if $addLink }}
+        <a href="{{ $imgdl }}" target="_blank" rel="noopener noreferrer">
+    {{- end }}
+
+    {{- if $cover -}}
+        {{- if (and (in $processableFormats $cover.MediaType.SubType) ($responsiveImages) (eq $prod true)) }}
+            <img loading="{{ $loading }}"
+                srcset='{{- range $size := $sizes -}}
+                            {{- if (ge $cover.Width $size) }}
+                                {{- printf "%s %s" (($cover.Resize (printf "%sx" $size)).RelPermalink) (printf "%sw," $size) }}
+                            {{- end }}
+                        {{- end }}
+                        {{- printf "%s %dw" ($cover.RelPermalink) ($cover.Width) }}'
+                src="{{ $cover.RelPermalink }}"
+                sizes="(min-width: 768px) 720px, 100vw"
+                width="{{ $cover.Width }}" height="{{ $cover.Height }}"
+                alt="{{ $coverAlt | plainify }}">
+        {{- else }}
+            <img loading="{{ $loading }}" src="{{ $imgdl }}" alt="{{ $coverAlt | plainify }}">
+        {{- end }}
+    {{- else }}
+        <img loading="{{ $loading }}" src="{{ $imgdl }}" alt="{{ $coverAlt | plainify }}">
+    {{- end }}
+
+    {{- if $addLink }}
+        </a>
+    {{- end -}}
+
+    {{- if $.IsSingle }}
+        {{ with $coverCaption -}}
+            <figcaption>{{ . | markdownify }}</figcaption>
+        {{- end }}
+    {{- end }}
+</figure>
+{{- end }}
+{{- end -}}

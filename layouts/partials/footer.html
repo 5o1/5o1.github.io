@@ -1,0 +1,336 @@
+{{- if not (.Param "hideFooter") }}
+<footer class="footer">
+    {{- if not site.Params.footer.hideCopyright }}
+        {{- if site.Copyright }}
+        <span>{{ site.Copyright | markdownify }}</span>
+        {{- else }}
+        <span>&copy; {{ now.Year }} <a href="{{ site.Home.RelPermalink }}">{{ site.Title }}</a></span>
+        {{- end }}
+        {{- print " · "}}
+    {{- end }}
+
+    {{- with site.Params.footer.text }}
+        {{ . | markdownify }}
+        {{- print " · "}}
+    {{- end }}
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+{{- end }}
+
+{{- if (not site.Params.disableScrollToTop) }}
+<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
+        <polyline points="17 11 12 6 7 11"></polyline>
+        <polyline points="17 18 12 13 7 18"></polyline>
+    </svg>
+</a>
+{{- end }}
+
+{{- partial "extend_footer.html" . }}
+
+
+    <!-- Image float preview: show full image in a floating layer on hover/focus -->
+    <style>
+        .image-float-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            /* we compute exact left/top and size in JS for pixel alignment */
+            max-width: 90vw;
+            max-height: 90vh;
+            box-shadow: none;
+            border-radius: var(--radius, 8px);
+            object-fit: contain;
+            z-index: 9999;
+            pointer-events: none;
+            transition: opacity 120ms ease;
+            opacity: 0.99;
+        }
+    </style>
+
+    <script>
+    ;(function(){
+        // include cover images and figure-based renders too
+        const selector = '.post-content img, .md-content img, .post-single .entry-cover img, .entry-cover img, figure.entry-cover img';
+        // If running on a coarse/touch pointer device (mobile), disable this interaction entirely
+        const isCoarse = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window);
+        if (isCoarse) return;
+        let overlay = null;
+        let overlaySource = null;
+        let overlayMode = null; // 'hover', 'focus', or 'press'
+        let lastPointerX = -1;
+        let lastPointerY = -1;
+        let scrollGraceTimer = null;
+        let scrollGraceActive = false;
+        const hoverSafeZonePadding = 28;
+
+        let overlayCentered = false;
+        function updateOverlayPosition(){
+            if (!overlay || !overlaySource) return;
+            const rect = overlaySource.getBoundingClientRect();
+            const natW = overlay.naturalWidth || overlay.width;
+            const natH = overlay.naturalHeight || overlay.height;
+            if (!natW || !natH) return;
+            const sImg = Math.max(rect.width / natW, rect.height / natH);
+            const ow = Math.round(natW * sImg);
+            const oh = Math.round(natH * sImg);
+            overlay.style.width = ow + 'px';
+            overlay.style.height = oh + 'px';
+            if (overlayCentered) {
+                // center in viewport
+                overlay.style.left = Math.round(window.innerWidth/2 - ow/2) + 'px';
+                overlay.style.top = Math.round(window.innerHeight/2 - oh/2) + 'px';
+            } else {
+                overlay.style.left = Math.round(rect.left + rect.width / 2 - ow / 2) + 'px';
+                overlay.style.top = Math.round(rect.top + rect.height / 2 - oh / 2) + 'px';
+            }
+            overlay.style.transform = '';
+        }
+
+        function isPointOverSource(){
+            if (!overlaySource || lastPointerX < 0 || lastPointerY < 0) return false;
+            const el = document.elementFromPoint(lastPointerX, lastPointerY);
+            return !!(el && (el === overlaySource || overlaySource.contains(el)));
+        }
+
+        function isPointInHoverSafeZone(){
+            if (!overlay || lastPointerX < 0 || lastPointerY < 0) return false;
+            const rect = overlay.getBoundingClientRect();
+            return lastPointerX >= rect.left - hoverSafeZonePadding &&
+                lastPointerX <= rect.right + hoverSafeZonePadding &&
+                lastPointerY >= rect.top - hoverSafeZonePadding &&
+                lastPointerY <= rect.bottom + hoverSafeZonePadding;
+        }
+
+        function beginScrollGrace(){
+            scrollGraceActive = true;
+            clearTimeout(scrollGraceTimer);
+            scrollGraceTimer = setTimeout(function(){
+                scrollGraceActive = false;
+                // After scrolling settles, only keep the overlay if the pointer is still over the source.
+                if (overlay && overlayMode === 'hover' && !isPointOverSource()) {
+                    destroyOverlay();
+                }
+            }, 140);
+        }
+
+        function makeOverlay(img, opts){
+            opts = opts || {};
+            if (overlay && overlaySource === img) {
+                overlayMode = opts.mode || overlayMode || 'hover';
+                updateOverlayPosition();
+                return;
+            }
+            if (overlay) destroyOverlay();
+            overlaySource = img;
+            overlayMode = opts.mode || 'hover';
+            overlayCentered = !!opts.centerInViewport;
+            const rect = img.getBoundingClientRect();
+            const natW = img.naturalWidth || img.width;
+            const natH = img.naturalHeight || img.height;
+            if (!natW || !natH) return;
+
+            // Detect whether the image is actually cropped in its displayed box.
+            // Compute the "cover" scale used when object-fit: cover is applied.
+            const displayW = rect.width;
+            const displayH = rect.height;
+            const sCover = Math.max(displayW / natW, displayH / natH);
+            const scaledW = natW * sCover;
+            const scaledH = natH * sCover;
+            const cropped = (Math.abs(scaledW - displayW) > 1 || Math.abs(scaledH - displayH) > 1);
+            // Also consider explicit object-fit: cover as an indicator
+            const cs = window.getComputedStyle(img);
+            const objectFitIsCover = cs && cs.objectFit === 'cover';
+            if (!cropped && !objectFitIsCover) {
+                // not cropped — do nothing
+                overlaySource = null;
+                return;
+            }
+            const sImg = Math.max(rect.width / natW, rect.height / natH);
+            const ow = Math.round(natW * sImg);
+            const oh = Math.round(natH * sImg);
+
+            const newImg = new Image();
+            newImg.src = img.currentSrc || img.src;
+            newImg.className = 'image-float-overlay';
+            newImg.style.width = ow + 'px';
+            newImg.style.height = oh + 'px';
+            if (overlayCentered) {
+                newImg.style.left = Math.round(window.innerWidth/2 - ow/2) + 'px';
+                newImg.style.top = Math.round(window.innerHeight/2 - oh/2) + 'px';
+            } else {
+                newImg.style.left = Math.round(rect.left + rect.width / 2 - ow / 2) + 'px';
+                newImg.style.top = Math.round(rect.top + rect.height / 2 - oh / 2) + 'px';
+            }
+            newImg.style.transform = '';
+            document.body.appendChild(newImg);
+            overlay = newImg;
+            // hide the source image while overlay is visible to avoid visual duplication
+            // Use opacity instead of visibility so the image remains hit-testable and hover does not flicker.
+            try {
+                overlaySource.__origOpacity = overlaySource.style.opacity || '';
+                overlaySource.style.opacity = '0';
+            } catch (e) {}
+            // reposition on scroll/resize
+            window.addEventListener('scroll', updateOverlayPosition, true);
+            window.addEventListener('resize', updateOverlayPosition);
+        }
+
+        function destroyOverlay(){
+            if (!overlay) return;
+            overlay.remove(); overlay = null;
+            if (overlaySource) {
+                try {
+                    overlaySource.style.opacity = overlaySource.__origOpacity || '';
+                    delete overlaySource.__origOpacity;
+                } catch (e) {}
+            }
+            overlaySource = null;
+            overlayMode = null;
+            window.removeEventListener('scroll', updateOverlayPosition, true);
+            window.removeEventListener('resize', updateOverlayPosition);
+        }
+
+        // use pointerover/out (bubble) for broader compatibility on desktop
+        document.addEventListener('pointerover', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (!img) return; if (!img.matches(selector)) return;
+            makeOverlay(img, {mode: 'hover'});
+        });
+
+        document.addEventListener('pointerout', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (!img) return; if (!img.matches(selector)) return;
+            if (scrollGraceActive) return;
+            if (overlayMode === 'focus') return;
+            if (overlayMode === 'hover') return;
+            destroyOverlay();
+        });
+
+        document.addEventListener('pointermove', function(e){
+            if (e.pointerType && e.pointerType !== 'mouse') return;
+            lastPointerX = e.clientX;
+            lastPointerY = e.clientY;
+            if (overlay && overlayMode === 'hover' && !scrollGraceActive && !isPointInHoverSafeZone()) {
+                destroyOverlay();
+            }
+        });
+
+        document.addEventListener('mouseleave', function(){
+            if (overlayMode === 'hover') destroyOverlay();
+        });
+
+        document.addEventListener('wheel', beginScrollGrace, {passive: true});
+        window.addEventListener('scroll', beginScrollGrace, {passive: true, capture: true});
+
+        // Use pointerdown/pointerup for touch and mouse presses (broad support)
+        document.addEventListener('pointerdown', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (!img) return; if (!img.matches(selector)) return;
+            if (overlay && overlaySource === img && overlayMode !== 'press') {
+                // Keep the current expanded image focused; do not let a click steal focus/blur it.
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            const isTouch = e.pointerType === 'touch';
+            makeOverlay(img, {centerInViewport: isTouch, mode: 'press'});
+        });
+
+        document.addEventListener('pointerup', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (overlay && overlaySource && img && overlaySource === img && overlayMode !== 'press') {
+                return;
+            }
+            // hide overlay on pointer up for press/touch interactions and clicks elsewhere
+            destroyOverlay();
+        });
+
+        // keyboard accessibility: focus/blur
+        document.addEventListener('focusin', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (!img) return; if (!img.matches(selector)) return;
+            makeOverlay(img, {mode: 'focus'});
+        });
+        document.addEventListener('focusout', function(e){
+            const img = e.target.closest && e.target.closest('img');
+            if (!img) return; if (!img.matches(selector)) return;
+            if (overlayMode === 'press') return;
+            destroyOverlay();
+        });
+
+        // make images keyboard-focusable if not already
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll(selector).forEach(function(img){
+                if (!img.hasAttribute('tabindex')) img.setAttribute('tabindex', '0');
+            });
+        });
+    })();
+    </script>
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+</script>
+
+{{- if (not site.Params.disableScrollToTop) }}
+<script>
+    var toplink = document.getElementById("top-link");
+    window.onscroll = function () {
+        const scrollThreshold = window.innerHeight;
+        if (document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold) {
+            toplink.classList.remove("hidden");
+        } else {
+            toplink.classList.add("hidden");
+        }
+    };
+</script>
+{{- end }}
+
+{{- if (not site.Params.disableThemeToggle) }}
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+</script>
+{{- end }}
