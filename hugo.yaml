@@ -3,6 +3,20 @@ title: Funclogic
 paginate: 5
 theme: PaperMod
 
+defaultContentLanguage: en
+defaultContentLanguageInSubdir: true
+disableDefaultLanguageRedirect: false
+
+languages:
+  en:
+    label: "English"
+    locale: "en-US"
+    weight: 1
+  zh:
+    label: "中文"
+    locale: "zh-CN"
+    weight: 2
+
 enableRobotsTXT: true
 buildDrafts: false
 buildFuture: false
@@ -13,6 +27,7 @@ minify:
   minifyOutput: true
 
 params:
+  mainSections: ["none"]
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
   title: Funclogic
   description: "This is a tiny blog."
@@ -52,7 +67,7 @@ params:
   label:
     text: "Funclogic"
     icon: /apple-touch-icon.png
-    iconHeight: 35
+    iconHeight: 53
 
   # profile-mode
   profileMode:
@@ -112,12 +127,12 @@ params:
     limit: 10 # refer: https://www.fusejs.io/api/methods.html#search
     keys: ["title", "permalink", "summary", "content"]
 
-# menu:
-#   main:
-#     - identifier: categories
-#       name: categories
-#       url: /categories/
-#       weight: 10
+menu:
+  main:
+    - identifier: projects
+      name: Projects
+      url: /projects/
+      weight: 5
 #     - identifier: tags
 #       name: tags
 #       url: /tags/

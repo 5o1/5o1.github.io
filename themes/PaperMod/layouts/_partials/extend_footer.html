@@ -1,3 +1,50 @@
 {{- /* Footer custom content area start */ -}}
 {{- /*     Insert any custom code web-analytics, resources, etc. here */ -}}
+<script>
+	(function () {
+		var toolbar = document.querySelector('[data-list-view-toolbar]');
+		if (!toolbar) return;
+
+		var body = document.body;
+		var buttons = Array.prototype.slice.call(toolbar.querySelectorAll('[data-list-view-mode]'));
+		var storageKey = 'paperModListView';
+		var defaultMode = 'cards';
+
+		function readStoredMode() {
+			try {
+				var value = window.localStorage.getItem(storageKey);
+				return value === 'details' ? 'details' : defaultMode;
+			} catch (error) {
+				return defaultMode;
+			}
+		}
+
+		function writeStoredMode(mode) {
+			try {
+				window.localStorage.setItem(storageKey, mode);
+			} catch (error) {
+				// Ignore storage errors.
+			}
+		}
+
+		function applyMode(mode) {
+			var nextMode = mode === 'details' ? 'details' : defaultMode;
+			body.setAttribute('data-list-view', nextMode);
+			buttons.forEach(function (button) {
+				var isActive = button.getAttribute('data-list-view-mode') === nextMode;
+				button.classList.toggle('active', isActive);
+				button.setAttribute('aria-pressed', String(isActive));
+			});
+			writeStoredMode(nextMode);
+		}
+
+		buttons.forEach(function (button) {
+			button.addEventListener('click', function () {
+				applyMode(button.getAttribute('data-list-view-mode'));
+			});
+		});
+
+		applyMode(readStoredMode());
+	})();
+</script>
 {{- /* Footer custom content area end */ -}}

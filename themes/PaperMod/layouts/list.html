@@ -7,21 +7,32 @@
 {{- if not .IsHome | and .Title }}
 <header class="page-header">
   {{- partial "breadcrumbs.html" . }}
-  <h1>
-    {{ .Title }}
-    {{- if and (or (eq .Kind `term`) (eq .Kind `section`)) (.Param "ShowRssButtonInSectionTermList") }}
-    {{- with .OutputFormats.Get "rss" }}
-    <a href="{{ .RelPermalink }}" title="RSS" aria-label="RSS">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round" height="23">
-        <path d="M4 11a9 9 0 0 1 9 9" />
-        <path d="M4 4a16 16 0 0 1 16 16" />
-        <circle cx="5" cy="19" r="1" />
-      </svg>
-    </a>
-    {{- end }}
-    {{- end }}
-  </h1>
+  {{- if or .IsHome (eq .Kind `section`) (eq .Kind `term`) }}
+  {{- $isZh := strings.HasPrefix .Lang "zh" -}}
+  <div class="page-header-top">
+    <h1>
+      {{ .Title }}
+      {{- if and (or (eq .Kind `term`) (eq .Kind `section`)) (.Param "ShowRssButtonInSectionTermList") }}
+      {{- with .OutputFormats.Get "rss" }}
+      <a href="{{ .RelPermalink }}" title="RSS" aria-label="RSS">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" height="23">
+          <path d="M4 11a9 9 0 0 1 9 9" />
+          <path d="M4 4a16 16 0 0 1 16 16" />
+          <circle cx="5" cy="19" r="1" />
+        </svg>
+      </a>
+      {{- end }}
+      {{- end }}
+    </h1>
+    <div class="list-view-toolbar" data-list-view-toolbar>
+      <div class="list-view-toolbar-actions" role="group" aria-label="{{ if $isZh }}列表展示方式{{ else }}List view mode{{ end }}">
+        <button type="button" class="list-view-btn" data-list-view-mode="cards">{{ if $isZh }}卡片{{ else }}Cards{{ end }}</button>
+        <button type="button" class="list-view-btn" data-list-view-mode="details">{{ if $isZh }}文字{{ else }}Text{{ end }}</button>
+      </div>
+    </div>
+  </div>
+  {{- end }}
   {{- if .Description }}
   <div class="post-description">
     {{ .Description | markdownify }}

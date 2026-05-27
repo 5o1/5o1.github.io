@@ -1,0 +1,46 @@
+{{- $homePermalinks := slice -}}
+{{- range site.Home.AllTranslations -}}
+  {{- $homePermalinks = $homePermalinks | append .RelPermalink -}}
+{{- end -}}
+{{- $isHomeAlias := in $homePermalinks .RelPermalink -}}
+
+{{- if $isHomeAlias }}
+{{- $defaultTarget := .RelPermalink -}}
+{{- $targets := dict -}}
+{{- range site.Home.AllTranslations -}}
+  {{- $targets = merge $targets (dict .Lang .RelPermalink) -}}
+{{- end -}}
+<script>
+  (function () {
+    var fallback = {{ $defaultTarget | jsonify | safeJS }};
+    var targets = {{ $targets | jsonify | safeJS }};
+    var langs = navigator.languages && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || navigator.userLanguage || ""];
+
+    var target = fallback;
+    for (var i = 0; i < langs.length; i++) {
+      var raw = String(langs[i] || "").toLowerCase();
+      var full = raw;
+      var base = raw.split("-")[0];
+
+      if (targets[full]) {
+        target = targets[full];
+        break;
+      }
+
+      if (targets[base]) {
+        target = targets[base];
+        break;
+      }
+    }
+
+    window.location.replace(target);
+  })();
+</script>
+<noscript>
+  <meta http-equiv="refresh" content="0; url={{ .RelPermalink }}">
+</noscript>
+{{- else }}
+<meta http-equiv="refresh" content="0; url={{ .RelPermalink }}">
+{{- end }}

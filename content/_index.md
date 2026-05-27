@@ -39,7 +39,7 @@ editPost:
 # Yuyang Li
 
 {{< row >}}
-![Yuyang Li](imgs/life_photo.png)
+![Yuyang Li](life_photo.png)
 I am Yuyang Li (李雨阳 in Chinese), a Master's student at ShanghaiTech University, where I work under the supervision of [Prof. Peng Hu](https://bme.shanghaitech.edu.cn/bme_en/2021/0205/c8252a686960/page.htm). I received my B.E. in Computer Science from Dalian Neusoft University of Information in Jul. 2023. 
 
 - **Research Focus:** End-to-end cardiac MRI reconstruction based on deep learning.

@@ -24,7 +24,7 @@
     flex-wrap: wrap;
 }
 
-.logo a {
+.logo > a {
     font-size: 24px;
     font-weight: 700;
     display: flex;
@@ -32,10 +32,10 @@
     column-gap: 0.55rem;
 }
 
-.logo a img,
-.logo a svg {
+.logo > a img,
+.logo > a svg {
     pointer-events: none;
-    border-radius: 6px;
+    border-radius: 50%;
 }
 
 .theme-toggle {
@@ -79,6 +79,93 @@
     font-weight: 500;
     padding: 0 0.4rem;
     display: inline-flex
+}
+
+.lang-dropdown {
+    position: relative;
+    min-height: inherit;
+}
+
+.lang-dropdown-summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--secondary);
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.2rem;
+}
+
+.lang-dropdown-summary::-webkit-details-marker {
+    display: none;
+}
+
+.lang-dropdown-summary::after {
+    content: "▾";
+    font-size: 0.8rem;
+    transform-origin: 50% 45%;
+    transition: transform 0.2s ease;
+}
+
+.lang-dropdown[open] .lang-dropdown-summary::after {
+    transform: rotate(180deg);
+}
+
+.lang-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    margin: 0;
+    padding: 0.35rem 0.25rem;
+    list-style: none;
+    min-width: 9rem;
+    background: var(--entry);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+}
+
+.lang-dropdown-menu li {
+    line-height: 1.4;
+}
+
+.lang-dropdown-menu a,
+.lang-dropdown-menu strong {
+    display: block;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.95rem;
+    border-radius: 6px;
+}
+
+.lang-dropdown-menu a {
+    font-weight: 500;
+    color: var(--secondary);
+}
+
+.lang-dropdown-menu a:hover {
+    background: var(--tertiary);
+    color: var(--primary);
+}
+
+.lang-dropdown-menu strong {
+    position: relative;
+    color: var(--primary);
+    font-weight: 750;
+    background: var(--tertiary);
+    border: 1px solid var(--border);
+    padding-left: 1.7rem;
+}
+
+.lang-dropdown-menu strong::before {
+    content: "\2713";
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: var(--primary);
 }
 
 .menu {

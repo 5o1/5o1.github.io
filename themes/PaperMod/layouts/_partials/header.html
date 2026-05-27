@@ -60,25 +60,31 @@
                 
                 {{- if (not site.Params.disableLangToggle) }}
                     {{- $lang := .Lang}}
-                    {{- with site.Home.Translations }}
+                    {{- with .Translations }}
+                    {{- $switcherLabel := "Language" -}}
+                    {{- if strings.HasPrefix $lang "zh" -}}
+                    {{- $switcherLabel = "语言" -}}
+                    {{- end -}}
                     {{- $separator := or $label_text (not site.Params.disableThemeToggle)}}
                     {{- if $separator }}<span class="nav-sep">|</span>{{ end }}
-                    <ul class="lang-menu">
-                        {{- range . -}}
-                        {{- if ne $lang .Lang }}
-                        <li>
-                            <a href="{{- .Permalink -}}" title="{{ .Language.Params.languageAltTitle | default (.Language.LanguageName | emojify) | default (.Lang | title) }}"
-                                aria-label="{{ .Language.LanguageName | default (.Lang | title) }}">
-                                {{- if (and site.Params.displayFullLangName (.Language.LanguageName)) }}
-                                {{- .Language.LanguageName | emojify -}}
-                                {{- else }}
-                                {{- .Lang | title -}}
+                    <details class="lang-dropdown">
+                        <summary class="lang-dropdown-summary" aria-label="Language switcher">{{ $switcherLabel }}</summary>
+                        <ul class="lang-dropdown-menu">
+                            {{- range . -}}
+                            {{- $langLabel := .Language.Label | default (.Lang | title) -}}
+                            <li>
+                                {{- if eq $lang .Lang -}}
+                                <strong>{{- $langLabel -}}</strong>
+                                {{- else -}}
+                                <a href="{{- .Permalink -}}" title="{{ .Language.Params.languageAltTitle | default ($langLabel | emojify) }}"
+                                    aria-label="{{ $langLabel }}">
+                                    {{- $langLabel -}}
+                                </a>
                                 {{- end -}}
-                            </a>
-                        </li>
-                        {{- end -}}
-                        {{- end}}
-                    </ul>
+                            </li>
+                            {{- end -}}
+                        </ul>
+                    </details>
                     {{- end }}
                 {{- end }}
             </div>
