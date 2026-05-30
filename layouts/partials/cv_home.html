@@ -4,7 +4,7 @@
 {{- $sidebarPhoto := .Scratch.Get "cvSidebarPhoto" | default "life_photo.png" -}}
 {{- $sidebarContacts := .Scratch.Get "cvSidebarContacts" | default slice -}}
 
-<div class="cv-layout">
+<div class="cv-layout" data-cv-layout>
   <aside class="cv-sidebar">
     {{- partial "cv_profile.html" (dict "Page" . "sidebarName" $sidebarName "sidebarPhoto" $sidebarPhoto "sidebarContacts" $sidebarContacts) }}
 
@@ -29,3 +29,65 @@
     {{- end }}
   </section>
 </div>
+
+<script>
+  (function () {
+    var layout = document.querySelector('[data-cv-layout]');
+    if (!layout) return;
+
+    var sidebar = layout.querySelector('.cv-sidebar');
+    var content = layout.querySelector('.cv-content');
+    if (!sidebar || !content) return;
+
+    var rafId = 0;
+
+    function measureLayoutMode() {
+      layout.classList.remove('cv-layout--mobile');
+
+      var sidebarRect = sidebar.getBoundingClientRect();
+      var contentRect = content.getBoundingClientRect();
+      layout.classList.toggle('cv-layout--mobile', sidebarRect.right > contentRect.left);
+    }
+
+    function syncSidebarScroll() {
+      var scrollHeight = document.documentElement.scrollHeight;
+      var viewportHeight = window.innerHeight;
+      var maxScroll = scrollHeight - viewportHeight;
+      var sidebarHeight = sidebar.scrollHeight;
+      var sidebarViewportHeight = sidebar.clientHeight;
+      var sidebarMaxScroll = Math.max(0, sidebarHeight - sidebarViewportHeight);
+      
+      if (maxScroll > 0 && sidebarMaxScroll > 0) {
+        var scrollProgress = (window.pageYOffset || document.documentElement.scrollTop) / maxScroll;
+        var sidebarOffset = scrollProgress * sidebarMaxScroll;
+        sidebar.style.transform = 'translateY(-' + sidebarOffset + 'px)';
+      }
+    }
+
+    function requestMeasure() {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(function () {
+        rafId = 0;
+        measureLayoutMode();
+        syncSidebarScroll();
+      });
+    }
+
+    function requestSyncScroll() {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(function () {
+        rafId = 0;
+        syncSidebarScroll();
+      });
+    }
+
+    window.addEventListener('resize', requestMeasure, { passive: true });
+    window.addEventListener('orientationchange', requestMeasure, { passive: true });
+    window.addEventListener('load', requestMeasure);
+    window.addEventListener('scroll', requestSyncScroll, { passive: true });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(requestMeasure).catch(function () {});
+    }
+    requestMeasure();
+  })();
+</script>

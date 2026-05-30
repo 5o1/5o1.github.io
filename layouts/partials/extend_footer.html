@@ -1,0 +1,46 @@
+<div class="reading-progress" aria-hidden="true">
+  <div class="reading-progress__bar" data-reading-progress-bar></div>
+</div>
+
+<script>
+  (function () {
+    var bar = document.querySelector('[data-reading-progress-bar]');
+    if (!bar) return;
+
+    if (window.matchMedia && window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches) {
+      var progress = bar.closest('.reading-progress');
+      if (progress) {
+        progress.remove();
+      }
+      return;
+    }
+
+    var ticking = false;
+
+    function updateReadingProgress() {
+      ticking = false;
+
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      var scrollHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+      );
+      var viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      var maxScroll = Math.max(scrollHeight - viewportHeight, 0);
+      var progress = maxScroll > 0 ? Math.min(Math.max(scrollTop / maxScroll, 0), 1) : 0;
+
+      bar.style.width = (progress * 100).toFixed(2) + '%';
+    }
+
+    function requestUpdate() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateReadingProgress);
+    }
+
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate, { passive: true });
+    window.addEventListener('load', requestUpdate);
+    requestUpdate();
+  })();
+</script>

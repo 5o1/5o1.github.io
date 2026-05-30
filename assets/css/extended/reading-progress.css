@@ -1,0 +1,24 @@
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 20;
+  pointer-events: none;
+  background: transparent;
+}
+
+.reading-progress__bar {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 55%, var(--secondary) 45%) 100%);
+  transform-origin: left center;
+  transition: width 80ms linear;
+}
+
+@media screen and (max-width: 768px), (hover: none) and (pointer: coarse) {
+  .reading-progress {
+    display: none;
+  }
+}
