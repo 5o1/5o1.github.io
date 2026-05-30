@@ -32,20 +32,13 @@ cover:
     hidden: true # only hide on current single page
 ---
 
-# Yuyang Li
+I am Yuyang Li (李雨阳 in Chinese), a Master's student at ShanghaiTech University, where I work under the supervision of [Prof. Peng Hu](https://bme.shanghaitech.edu.cn/bme_en/2021/0205/c8252a686960/page.htm). I received my B.E. in Computer Science from Dalian Neusoft University of Information in Jul. 2023.
 
-{{< row >}}
-![Yuyang Li](life_photo.png)
-I am Yuyang Li (李雨阳 in Chinese), a Master's student at ShanghaiTech University, where I work under the supervision of [Prof. Peng Hu](https://bme.shanghaitech.edu.cn/bme_en/2021/0205/c8252a686960/page.htm). I received my B.E. in Computer Science from Dalian Neusoft University of Information in Jul. 2023. 
-
-- **Research Focus:** End-to-end cardiac MRI reconstruction based on deep learning.
-- **Technical Skills:** Proficient in C++, Python, and PyTorch.
-- **Interests:** Active interest in AI Agents.
-{{< /row >}}
-
-[![Email](https://img.shields.io/badge/Email-liyuyang@shanghaitech.edu.cn-blue?style=flat-square&logo=gmail)](mailto:liyuyang@shanghaitech.edu.cn)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/yuyang-li-04198939b/)
-[![GitHub](https://img.shields.io/badge/GitHub-5o1-black?style=flat-square&logo=github)](https://github.com/5o1)
+{{< cvside kind="name" >}}Yuyang Li{{< /cvside >}}
+{{< cvside kind="photo" >}}life_photo.png{{< /cvside >}}
+{{< cvside kind="contact" name="Email" icon="email" url="mailto:liyuyang@shanghaitech.edu.cn" >}}{{< /cvside >}}
+{{< cvside kind="contact" name="LinkedIn" icon="linkedin" url="https://www.linkedin.com/in/yuyang-li-04198939b/" >}}{{< /cvside >}}
+{{< cvside kind="contact" name="GitHub" icon="github" url="https://github.com/5o1" >}}{{< /cvside >}}
 
 ---
 

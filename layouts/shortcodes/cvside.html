@@ -1,0 +1,10 @@
+{{- $kind := (.Get "kind") | default "contact" -}}
+{{- if eq $kind "name" -}}
+  {{- $.Page.Scratch.Set "cvSidebarName" (trim .Inner " \n\t") -}}
+{{- else if eq $kind "photo" -}}
+  {{- $.Page.Scratch.Set "cvSidebarPhoto" (trim .Inner " \n\t") -}}
+{{- else if eq $kind "contact" -}}
+  {{- $contacts := $.Page.Scratch.Get "cvSidebarContacts" | default slice -}}
+  {{- $contacts = $contacts | append (dict "name" (.Get "name") "icon" (.Get "icon") "url" (.Get "url")) -}}
+  {{- $.Page.Scratch.Set "cvSidebarContacts" $contacts -}}
+{{- end -}}

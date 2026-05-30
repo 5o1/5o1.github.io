@@ -29,24 +29,18 @@ cover:
     hidden: true
 ---
 
-# Yuyang Li
-
-{{< row >}}
-![Yuyang Li](life_photo.png)
 我是李雨阳，目前是上海科技大学硕士研究生，师从 [胡鹏教授](https://bme.shanghaitech.edu.cn/bme_en/2021/0205/c8252a686960/page.htm)。我于 2023 年 7 月获大连东软信息学院计算机科学与技术学士学位。
-
-- **研究方向：** 基于深度学习的端到端心脏 MRI 重建。
-- **技术栈：** 熟练使用 C++、Python 与 PyTorch。
-- **兴趣方向：** 对 AI Agent 保持持续关注与实践。
-{{< /row >}}
-
-[![Email](https://img.shields.io/badge/Email-liyuyang@shanghaitech.edu.cn-blue?style=flat-square&logo=gmail)](mailto:liyuyang@shanghaitech.edu.cn)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/yuyang-li-04198939b/)
-[![GitHub](https://img.shields.io/badge/GitHub-5o1-black?style=flat-square&logo=github)](https://github.com/5o1)
 
 ---
 
+{{< cvside kind="name" >}}Yuyang Li{{< /cvside >}}
+{{< cvside kind="photo" >}}life_photo.png{{< /cvside >}}
+{{< cvside kind="contact" name="Email" icon="email" url="mailto:liyuyang@shanghaitech.edu.cn" >}}{{< /cvside >}}
+{{< cvside kind="contact" name="LinkedIn" icon="linkedin" url="https://www.linkedin.com/in/yuyang-li-04198939b/" >}}{{< /cvside >}}
+{{< cvside kind="contact" name="GitHub" icon="github" url="https://github.com/5o1" >}}{{< /cvside >}}
+
 ## 教育经历
+
 
 * **2023.09 – 2026.07** | **生物医学工程硕士，上海科技大学**，HuLab。
   * *总绩点：* 3.74/4.0 | *专业绩点：* 3.8/4.0

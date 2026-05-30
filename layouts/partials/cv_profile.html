@@ -1,0 +1,29 @@
+{{- $sidebarName := .sidebarName | default (.Page.Title | default site.Title) -}}
+{{- $sidebarPhoto := .sidebarPhoto | default "life_photo.png" -}}
+{{- $sidebarContacts := .sidebarContacts | default slice -}}
+{{- $class := .class | default "" -}}
+
+<section class="cv-profile-panel {{ $class }}">
+  {{- with .Page.Resources.GetMatch $sidebarPhoto }}
+    {{- $avatar := .Resize "520x" }}
+    <figure class="cv-avatar">
+      <img src="{{ $avatar.RelPermalink }}" alt="{{ $sidebarName }}" loading="eager" decoding="async">
+    </figure>
+  {{- else }}
+    <figure class="cv-avatar">
+      <img src="{{ $sidebarPhoto | relURL }}" alt="{{ $sidebarName }}" loading="eager" decoding="async">
+    </figure>
+  {{- end }}
+
+  <h1 class="cv-name">{{ $sidebarName }}</h1>
+
+  {{- with $sidebarContacts }}
+  <div class="cv-social-icons" aria-label="Contact links">
+    {{- range . }}
+    <a class="cv-social-icon" href="{{ .url | safeURL }}" title="{{ .name }}" aria-label="{{ .name }}" {{- if findRE "^(https?://|//)" .url }} target="_blank" rel="noopener noreferrer"{{- end }}>
+      {{- partial "svg.html" (dict "name" .icon) }}
+    </a>
+    {{- end }}
+  </div>
+  {{- end }}
+</section>

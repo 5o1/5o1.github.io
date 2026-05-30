@@ -1,0 +1,31 @@
+{{- $content := .Content -}}
+
+{{- $sidebarName := .Scratch.Get "cvSidebarName" | default (.Title | default site.Title) -}}
+{{- $sidebarPhoto := .Scratch.Get "cvSidebarPhoto" | default "life_photo.png" -}}
+{{- $sidebarContacts := .Scratch.Get "cvSidebarContacts" | default slice -}}
+
+<div class="cv-layout">
+  <aside class="cv-sidebar">
+    {{- partial "cv_profile.html" (dict "Page" . "sidebarName" $sidebarName "sidebarPhoto" $sidebarPhoto "sidebarContacts" $sidebarContacts) }}
+
+    {{- with .TableOfContents }}
+    <section class="cv-panel cv-toc-panel">
+      <h2 class="cv-panel-title">{{ i18n "toc" | default "Table of Contents" }}</h2>
+      <div class="cv-toc">
+        {{ . | safeHTML }}
+      </div>
+    </section>
+    {{- end }}
+  </aside>
+
+  <section class="cv-content post-content md-content">
+    <div class="cv-mobile-profile">
+      {{- partial "cv_profile.html" (dict "Page" . "sidebarName" $sidebarName "sidebarPhoto" $sidebarPhoto "sidebarContacts" $sidebarContacts "class" "cv-mobile-profile-panel") }}
+    </div>
+    {{- if not (.Param "disableAnchoredHeadings") }}
+      {{- partial "anchored_headings.html" $content -}}
+    {{- else }}
+      {{- $content -}}
+    {{- end }}
+  </section>
+</div>
