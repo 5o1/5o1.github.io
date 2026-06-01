@@ -6,16 +6,18 @@
 
 <div class="cv-layout" data-cv-layout>
   <aside class="cv-sidebar">
-    {{- partial "cv_profile.html" (dict "Page" . "sidebarName" $sidebarName "sidebarPhoto" $sidebarPhoto "sidebarContacts" $sidebarContacts) }}
+    <div class="cv-sidebar__inner" data-cv-sidebar-inner>
+      {{- partial "cv_profile.html" (dict "Page" . "sidebarName" $sidebarName "sidebarPhoto" $sidebarPhoto "sidebarContacts" $sidebarContacts) }}
 
-    {{- with .TableOfContents }}
-    <section class="cv-panel cv-toc-panel">
-      <h2 class="cv-panel-title">{{ i18n "toc" | default "Table of Contents" }}</h2>
-      <div class="cv-toc">
-        {{ . | safeHTML }}
-      </div>
-    </section>
-    {{- end }}
+      {{- with .TableOfContents }}
+      <section class="cv-panel cv-toc-panel">
+        <h2 class="cv-panel-title">{{ i18n "toc" | default "Table of Contents" }}</h2>
+        <div class="cv-toc">
+          {{ . | safeHTML }}
+        </div>
+      </section>
+      {{- end }}
+    </div>
   </aside>
 
   <section class="cv-content post-content md-content">
@@ -36,10 +38,12 @@
     if (!layout) return;
 
     var sidebar = layout.querySelector('.cv-sidebar');
+    var sidebarInner = layout.querySelector('[data-cv-sidebar-inner]');
     var content = layout.querySelector('.cv-content');
-    if (!sidebar || !content) return;
+      if (!sidebar || !sidebarInner || !content) return;
 
     var rafId = 0;
+    var sidebarOffset = 0;
 
     function measureLayoutMode() {
       layout.classList.remove('cv-layout--mobile');
@@ -53,15 +57,22 @@
       var scrollHeight = document.documentElement.scrollHeight;
       var viewportHeight = window.innerHeight;
       var maxScroll = scrollHeight - viewportHeight;
-      var sidebarHeight = sidebar.scrollHeight;
-      var sidebarViewportHeight = sidebar.clientHeight;
+      var sidebarHeight = sidebarInner.scrollHeight;
+      var sidebarTop = parseFloat(window.getComputedStyle(sidebar).top || '0') || 0;
+      var sidebarBottom = parseFloat(window.getComputedStyle(sidebar).bottom || '0') || 0;
+      var sidebarViewportHeight = Math.max(0, viewportHeight - sidebarTop - sidebarBottom);
       var sidebarMaxScroll = Math.max(0, sidebarHeight - sidebarViewportHeight);
-      
-      if (maxScroll > 0 && sidebarMaxScroll > 0) {
-        var scrollProgress = (window.pageYOffset || document.documentElement.scrollTop) / maxScroll;
-        var sidebarOffset = scrollProgress * sidebarMaxScroll;
-        sidebar.style.transform = 'translateY(-' + sidebarOffset + 'px)';
+
+      if (maxScroll <= 0 || sidebarMaxScroll <= 0) {
+        sidebarOffset = 0;
+        sidebarInner.style.transform = '';
+        return;
       }
+
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+      var scrollProgress = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+      sidebarOffset = scrollProgress * sidebarMaxScroll;
+      sidebarInner.style.transform = 'translateY(-' + sidebarOffset + 'px)';
     }
 
     function requestMeasure() {
