@@ -1,0 +1,23 @@
+{{/*
+  publication_card.html — renders the citation info block (right side of a publication card).
+  Expects a dict with: title, author, year, doi, url, venue, citekey, type.
+  The card itself is wrapped in a link by publication_entry.html.
+*/}}
+
+{{- $entry := . -}}
+
+<div class="pub-info">
+  <h3 class="pub-title">{{ $entry.title }}</h3>
+
+  <p class="pub-authors">{{ $entry.author }}</p>
+
+  <p class="pub-venue">
+    {{- with $entry.venue -}}
+      <span class="pub-venue-name">{{ . }}</span>
+    {{- end -}}
+    {{- if and $entry.year (ne $entry.year "") -}}
+      {{- with $entry.venue -}}·{{- end -}}
+      <span class="pub-year">{{ $entry.year }}</span>
+    {{- end -}}
+  </p>
+</div>

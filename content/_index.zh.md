@@ -58,12 +58,25 @@ cover:
 
 ### 会议论文
 
-1. **Y. Li**, Y. Deng, and W. Shang, "MoE-UNet: Using Conditional Sparse Activation to Improve the Capacity of Multi-task End-to-End Reconstruction," in *Proceedings of the 2026 ISMRM & ISMRT Annual Meeting & Exhibition*, **(Accepted)**, May 2026.
-2. **Y. Li**, Y. Deng, and W. Shang, "MoRE: Mixture-of-Experts-based Task-Adaptive MRI End-to-End Multimodal Reconstruction," in *Proceedings of the Annual International Conference of the IEEE Engineering in Medicine and Biology Society*, **(Accepted)**, Jul. 2026.
+{{< publications bib="conference.bib" defaultCover="/images/paper-placeholder.svg" >}}
 
 ### 挑战赛论文
 
-1. **Y. Li**, Y. Deng, Z. Zhou, and P. Hu, *Branch Learning in MRI: More Data, More Models, More Training*, 2025. arXiv: 2512.20330 [eess.IV]. 链接：[https://arxiv.org/abs/2512.20330](https://arxiv.org/abs/2512.20330).
+{{< publications bib="challenge.bib" defaultCover="/images/paper-placeholder.svg" >}}
+
+## 技能
+
+* **编程:** Python, C/C++, MATLAB, Cython, Pybind11.
+* **深度学习:** PyTorch, PyTorch Lightning.
+* **科学计算:** BART, SigPy, Pandas, NumPy, SciPy.
+* **工具:** Linux, Git, Docker, LaTeX.
+* **您可能关心的:**
+  * Agent Experience:
+    * Copilot, Claude Code;
+    * 使用 AI 聊天机器人（Gemini、GPT）辅助 Research 、 Writing 和 Coding ；
+    * 使用了 Hugo + Vibe Coding + 我自己 制作了[本站](/)；
+    * 我的 Openclaw 伙伴在[这个 GitHub 账号](https://github.com/metavor-art)发布它的创作。
+* **语言:** 英语（CET-4: 478, CET-6: 423）。
 
 ## 其他经历
 

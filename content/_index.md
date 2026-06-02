@@ -62,21 +62,25 @@ I am Yuyang Li (李雨阳 in Chinese), a Master's student at ShanghaiTech Univer
 
 ### Conference Proceedings
 
-1. **Y. Li**, Y. Deng, and W. Shang, "MoE-UNet: Using Conditional Sparse Activation to Improve the Capacity of Multi-task End-to-End Reconstruction," in *Proceedings of the 2026 ISMRM & ISMRT Annual Meeting & Exhibition*, **(Accepted)**, May 2026.
-2. **Y. Li**, Y. Deng, and W. Shang, "MoRE: Mixture-of-Experts-based Task-Adaptive MRI End-to-End Multimodal Reconstruction," in *Proceedings of the Annual International Conference of the IEEE Engineering in Medicine and Biology Society*, **(Accepted)**, Jul. 2026.
+{{< publications bib="conference.bib" defaultCover="/images/paper-placeholder.svg" >}}
 
 ### Challenge Paper
 
-1. **Y. Li**, Y. Deng, Z. Zhou, and P. Hu, *Branch Learning in MRI: More Data, More Models, More Training*, 2025. arXiv: 2512.20330 [eess.IV]. 🔗 URL: [https://arxiv.org/abs/2512.20330](https://arxiv.org/abs/2512.20330).
+{{< publications bib="challenge.bib" defaultCover="/images/paper-placeholder.svg" >}}
 
-<!-- ## Skills
+## Skills
 
 * **Programming:** Python, C/C++, MATLAB, Cython, Pybind11.
 * **Deep Learning:** PyTorch, PyTorch Lightning.
 * **Sci-Computing:** BART, SigPy, Pandas, NumPy, SciPy.
 * **Tools:** Linux, Git, Docker, LaTeX.
-* **What You Might Care About:** Agent Experience: Use AI agents to assist in research, writing, and coding. Briefly experimented with OpenClaw and custom agent loops (No experience in training LLMs).
-* **Languages:** Mandarin Chinese (Native), English (CET-4: 478, CET-6: 423). -->
+* **You may be interested in:**
+  * Agent Experience:
+    * Copilot, Claude Code;
+    * Using AI chatbots (Gemini, GPT) for assisted research, writing, and coding;
+    * [This site](/) was built with Hugo + Vibe Coding + myself;
+    * My Openclaw partner publishes its creations on [this GitHub account](https://github.com/metavor-art).
+* **Languages:** Mandarin Chinese (Native), English (CET-4: 478, CET-6: 423).
 
 ## Miscellaneous Experience
 

@@ -1,0 +1,136 @@
+{{/*
+  publications shortcode — reads a .bib file from the current page bundle,
+  parses it, sorts by year descending, and renders publication cards.
+
+  Usage:
+    {{< publications bib="conference.bib" >}}
+    {{< publications bib="conference.bib" coverRatio="16:9" defaultCover="/images/default.png" >}}
+
+  Parameters:
+    bib          - bib filename in current page bundle (required)
+    coverRatio   - W:H ratio for cover images, default "16:9"
+    defaultCover - default cover image path:
+                   - starts with "/" -> relative to static/
+                   - otherwise -> resolved via .Page.Resources.GetMatch in bundle
+*/}}
+
+{{- $bibFile := .Get "bib" -}}
+{{- $coverRatio := .Get "coverRatio" | default "16:9" -}}
+{{- $defaultCover := .Get "defaultCover" -}}
+{{- $bibContent := "" -}}
+{{- with .Page.Resources.GetMatch $bibFile -}}
+  {{- $bibContent = .Content -}}
+{{- else -}}
+  {{- warnf "publications shortcode: bib file %q not found in page bundle" $bibFile -}}
+  {{- return -}}
+{{- end -}}
+
+{{- $entries := slice -}}
+
+{{- range $ei, $eblock := (split $bibContent "@") -}}
+  {{- $block := trim $eblock "\n\r\t " -}}
+  {{- if eq $block "" }}{{ continue }}{{ end -}}
+
+  {{- $typeMatch := findRE `^[a-zA-Z]+\s*\{` $block -}}
+  {{- if not $typeMatch }}{{ continue }}{{ end -}}
+
+  {{- $typeRaw := trim (index $typeMatch 0) "@" -}}
+  {{- $typeRaw = trim $typeRaw "{" -}}
+  {{- $entryType := lower $typeRaw -}}
+  {{- $rest1 := replaceRE `^[a-zA-Z]+\s*\{` "" $block -}}
+
+  {{- $ckMatch := findRE `^[^{},\s]+` $rest1 -}}
+  {{- if not $ckMatch }}{{ continue }}{{ end -}}
+  {{- $citekey := trim (index $ckMatch 0) " \n\r\t" -}}
+
+  {{- $ckLen := len (index $ckMatch 0) -}}
+  {{- $afterCk := slicestr $rest1 $ckLen -}}
+  {{- $afterCk = trim $afterCk " \n\r\t" -}}
+  {{- if gt (len $afterCk) 0 -}}
+    {{- if eq (slicestr $afterCk 0 1) "," }}{{ $afterCk = slicestr $afterCk 1 -}}{{ end -}}
+  {{- end -}}
+  {{- $afterCk = trim $afterCk " \n\r\t" -}}
+
+  {{- $fieldRE := `(title|author|year|doi|url|booktitle|journal|cover)\s*=\s*\{(?:[^{}]|(?:\{[^{}]*\}))*?\}` -}}
+  {{- $fieldMatches := findRE $fieldRE $afterCk -}}
+
+  {{- $title := "" -}}
+  {{- $author := "" -}}
+  {{- $year := "" -}}
+  {{- $doi := "" -}}
+  {{- $url := "" -}}
+  {{- $booktitle := "" -}}
+  {{- $journal := "" -}}
+  {{- $cover := "" -}}
+
+  {{- range $fieldMatches -}}
+    {{- $fm := . -}}
+    {{- $fkMatch := findRE `(title|author|year|doi|url|booktitle|journal|cover)` $fm -}}
+    {{- if $fkMatch -}}
+      {{- $k := lower (index $fkMatch 0) -}}
+      {{- $v := replaceRE `(title|author|year|doi|url|booktitle|journal|cover)\s*=\s*\{` "" $fm -}}
+      {{- $v = trim $v "}" -}}
+      {{- $v = trim $v " " -}}
+      {{- if eq $k "title" }}{{- $title = $v -}}{{ end -}}
+      {{- if eq $k "author" }}{{- $author = $v -}}{{ end -}}
+      {{- if eq $k "year" }}{{- $year = $v -}}{{ end -}}
+      {{- if eq $k "doi" }}{{- $doi = $v -}}{{ end -}}
+      {{- if eq $k "url" }}{{- $url = $v -}}{{ end -}}
+      {{- if eq $k "booktitle" }}{{- $booktitle = $v -}}{{ end -}}
+      {{- if eq $k "journal" }}{{- $journal = $v -}}{{ end -}}
+      {{- if eq $k "cover" }}{{- $cover = $v -}}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $venue := "" -}}
+  {{- if and $booktitle (ne $booktitle "") }}{{- $venue = $booktitle -}}{{ end -}}
+  {{- if and $journal (ne $journal "") }}{{- $venue = $journal -}}{{ end -}}
+
+  {{- $yearInt := 0 -}}
+  {{- with $year }}{{- $yearInt = int $year }}{{- end -}}
+
+  {{- $linkTarget := "" -}}
+  {{- if and $doi (ne $doi "") }}{{- $linkTarget = printf "https://doi.org/%s" $doi -}}
+  {{- else if and $url (ne $url "") }}{{- $linkTarget = $url -}}
+  {{- end -}}
+
+  {{- $entries = $entries | append (dict
+    "citekey" $citekey
+    "type" $entryType
+    "title" $title
+    "author" $author
+    "year" $year
+    "yearInt" $yearInt
+    "doi" $doi
+    "url" $url
+    "venue" $venue
+    "cover" $cover
+    "linkTarget" $linkTarget
+  ) -}}
+{{- end -}}
+
+{{- $sorted := slice -}}
+{{- range $e := $entries -}}{{ $sorted = $sorted | append $e }}{{ end -}}
+{{- range $i := seq (sub (len $sorted) 1) -}}
+  {{- range $j := seq $i -}}
+    {{- $nj := add $j 1 -}}
+    {{- if and (lt $j (len $sorted)) (lt $nj (len $sorted)) -}}
+      {{- if lt (index $sorted $j).yearInt (index $sorted $nj).yearInt -}}
+        {{- $a := index $sorted $j -}}
+        {{- $b := index $sorted $nj -}}
+        {{- $sorted = merge (slice $sorted) (dict $j $b | dict $nj $a) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+<div class="publications-list" data-cover-ratio="{{ $coverRatio }}" {{ with $defaultCover }}data-default-cover="{{ . }}"{{ end }}>
+{{- range $sorted -}}
+  {{- partial "publication_entry.html" (dict
+    "entry" .
+    "coverRatio" $coverRatio
+    "defaultCover" $defaultCover
+    "page" $.Page
+  ) -}}
+{{- end -}}
+</div>

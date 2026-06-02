@@ -50,7 +50,7 @@
 
       var sidebarRect = sidebar.getBoundingClientRect();
       var contentRect = content.getBoundingClientRect();
-      layout.classList.toggle('cv-layout--mobile', sidebarRect.right > contentRect.left);
+      layout.classList.toggle('cv-layout--mobile', sidebarRect.right > contentRect.left - 24);
     }
 
     function syncSidebarScroll() {

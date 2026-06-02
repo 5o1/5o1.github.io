@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:1313/assets/css/stylesheet.82802dd53776bd4624ff9dd69399aede35f01535f3da0ca2f0576ced23ebea28.css\")"
+    ]
+  }
+}

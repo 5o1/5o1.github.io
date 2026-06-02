@@ -68,6 +68,7 @@
   display: block;
   object-fit: cover;
   object-position: center top;
+  margin: 0;
 }
 
 .cv-name {
@@ -148,6 +149,11 @@
 
 .cv-content {
   min-width: 0;
+  margin-left: 0.5rem;
+}
+
+.cv-layout--mobile .cv-content {
+  margin-left: 0;
 }
 
 .cv-layout--mobile .cv-sidebar {
@@ -208,6 +214,7 @@
 .cv-layout--mobile .cv-mobile-profile .cv-avatar img {
   height: auto;
   object-fit: contain;
+  margin: 0;
 }
 
 @media screen and (max-width: 720px) {

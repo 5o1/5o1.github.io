@@ -1,0 +1,96 @@
+{{/*
+  publication_covers.html — injected via extend_footer to populate cover images
+  for publication cards. Tries manual cover > JS fetch > default cover > placeholder.
+*/}}
+
+<script>
+(function () {
+  function initPublicationCovers() {
+    var covers = document.querySelectorAll('.pub-cover[data-citekey]');
+    if (!covers.length) return;
+
+    function setCover(el, src, alt) {
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = alt || '';
+      img.loading = 'lazy';
+      img.onload = function () {
+        el.classList.add('pub-cover--loaded');
+      };
+      img.onerror = function () {
+        if (img.parentNode === el) el.removeChild(img);
+      };
+      // Don't clear el.innerHTML — keep the inline placeholder span as
+      // a fallback so the cover is never empty if the img fails or
+      // its onload doesn't fire (e.g. cache hit).
+      el.appendChild(img);
+      // Cached images may not fire onload synchronously.
+      if (img.complete && img.naturalWidth > 0) {
+        el.classList.add('pub-cover--loaded');
+      }
+    }
+
+    function tryFetchOgImage(url, el, title, onSuccess) {
+      var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+      var settled = false;
+      var finish = function (fn) { if (!settled) { settled = true; fn(); } };
+      var timer = setTimeout(function () { finish(function () {}); }, 3000);
+      fetch(proxyUrl)
+        .then(function (resp) { return resp.text(); })
+        .then(function (html) {
+          var match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+          clearTimeout(timer);
+          if (match && match[1]) {
+            finish(function () { setCover(el, match[1], title); });
+          } else {
+            finish(function () {});
+          }
+        })
+        .catch(function () {
+          clearTimeout(timer);
+          finish(function () {});
+        });
+    }
+
+    function applyCover(el) {
+      var manualCover = el.getAttribute('data-manual-cover');
+      var defaultCover = el.getAttribute('data-default-cover');
+      var doi = el.getAttribute('data-doi');
+      var url = el.getAttribute('data-url');
+      var title = el.getAttribute('data-title');
+
+      // 1. Manual cover from bib field
+      if (manualCover) {
+        setCover(el, manualCover, title);
+        return;
+      }
+
+      // 2. Show default cover immediately so the card is never blank,
+      //    even when og-image fetch hangs or fails.
+      if (defaultCover) {
+        setCover(el, defaultCover, title);
+      } else {
+        el.classList.add('pub-cover--placeholder');
+      }
+
+      // 3. Try to upgrade with DOI OG image, then URL OG image.
+      if (doi) {
+        tryFetchOgImage('https://doi.org/' + doi, el, title);
+      }
+      if (url) {
+        tryFetchOgImage(url, el, title);
+      }
+    }
+
+    covers.forEach(function (el) {
+      applyCover(el);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPublicationCovers);
+  } else {
+    initPublicationCovers();
+  }
+})();
+</script>

@@ -1,0 +1,177 @@
+/* publications.css — styles for bib-driven publication cards */
+
+.publications-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.publication-entry {
+  position: relative;
+}
+
+.publication-entry__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none !important;
+  color: inherit;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.publication-entry__link * {
+  text-decoration: none !important;
+}
+
+a.publication-entry__link:hover,
+a.publication-entry__link:focus-visible {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Title row */
+.pub-title-row {
+  width: 100%;
+  margin-top: -0.6rem;
+  margin-bottom: -0.35rem;
+}
+
+.pub-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--primary);
+  margin: 0;
+  text-decoration: none !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Bottom row: cover left + info right */
+.pub-bottom-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 0.1rem;
+}
+
+/* Cover */
+.pub-cover {
+  position: relative;
+  flex-shrink: 0;
+  width: 110px;
+  min-height: 62px;
+  border-radius: calc(var(--radius) * 0.5);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.pub-cover-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pub-cover-placeholder svg {
+  width: 28px;
+  height: 28px;
+}
+
+.pub-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  margin: 0;
+  display: none;
+}
+
+.pub-cover--loaded img {
+  display: block;
+}
+
+.pub-cover--loaded .pub-cover-placeholder {
+  display: none;
+}
+
+/* Info column */
+.pub-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.pub-authors {
+  font-size: 0.78rem;
+  color: var(--primary);
+  margin: 0;
+  line-height: 1.3;
+  text-decoration: none !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pub-meta {
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.4;
+  text-decoration: none !important;
+}
+
+.pub-venue {
+  font-style: italic;
+  color: var(--secondary);
+}
+
+.pub-year {
+  color: var(--secondary);
+  text-decoration: none !important;
+}
+
+/* Link icon bottom-right */
+.pub-link-icon {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.4rem;
+  width: 14px;
+  height: 14px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pub-link-icon svg,
+.pub-link-icon img {
+  width: 14px;
+  height: 14px;
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 480px) {
+  .pub-cover {
+    width: 100%;
+  }
+
+  .pub-bottom-row {
+    flex-direction: column;
+  }
+}
