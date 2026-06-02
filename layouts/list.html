@@ -87,7 +87,7 @@
 {{- $class = printf "%s cover-side cover-%s" $class $coverPosition }}
 {{- end }}
 
-<article class="{{ $class }}"{{ if $isSideCover }} style="--entry-cover-width: {{ $coverWidth }}; --entry-cover-ratio: {{ $coverAspectRatio }};"{{ end }}>
+<article class="{{ $class }}"{{ if $isSideCover }} style="{{ printf "--entry-cover-width: %s; --entry-cover-ratio: %s;" $coverWidth $coverAspectRatio | safeCSS }}"{{ end }}>
   {{- if $isSideCover }}
   {{- partial "cover.html" (dict "cxt" . "Cover" $coverConfig "IsSingle" false "isHidden" $isHidden) }}
   {{- else }}
