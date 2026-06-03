@@ -1,0 +1,26 @@
+{
+  "name": "5o1.github.io",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/5o1/5o1.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/5o1/5o1.github.io/issues"
+  },
+  "homepage": "https://github.com/5o1/5o1.github.io#readme",
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.75",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1"
+  }
+}

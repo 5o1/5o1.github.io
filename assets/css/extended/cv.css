@@ -217,6 +217,13 @@
   margin: 0;
 }
 
+.cv-layout--mobile .cv-panel {
+  padding: calc(var(--gap) * 0.45);
+}
+
+/* Safety net: pure-CSS fallback in case cv_home.html's geometry probe
+   hasn't toggled .cv-layout--mobile yet. Class-based rule above is the
+   source of truth; this is just for the pre-JS render flash. */
 @media screen and (max-width: 720px) {
   .cv-panel {
     padding: calc(var(--gap) * 0.45);

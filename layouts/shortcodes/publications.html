@@ -39,6 +39,7 @@
   {{- $entryType := lower $typeRaw -}}
   {{- $rest1 := replaceRE `^[a-zA-Z]+\s*\{` "" $block -}}
 
+
   {{- $ckMatch := findRE `^[^{},\s]+` $rest1 -}}
   {{- if not $ckMatch }}{{ continue }}{{ end -}}
   {{- $citekey := trim (index $ckMatch 0) " \n\r\t" -}}
@@ -51,7 +52,7 @@
   {{- end -}}
   {{- $afterCk = trim $afterCk " \n\r\t" -}}
 
-  {{- $fieldRE := `(title|author|year|doi|url|booktitle|journal|cover)\s*=\s*\{(?:[^{}]|(?:\{[^{}]*\}))*?\}` -}}
+  {{- $fieldRE := `(title|author|year|doi|url|booktitle|journal|cover|eprint|archiveprefix)\s*=\s*\{(?:[^{}]|(?:\{[^{}]*\}))*?\}` -}}
   {{- $fieldMatches := findRE $fieldRE $afterCk -}}
 
   {{- $title := "" -}}
@@ -62,13 +63,15 @@
   {{- $booktitle := "" -}}
   {{- $journal := "" -}}
   {{- $cover := "" -}}
+  {{- $eprint := "" -}}
+  {{- $archivePrefix := "" -}}
 
   {{- range $fieldMatches -}}
     {{- $fm := . -}}
-    {{- $fkMatch := findRE `(title|author|year|doi|url|booktitle|journal|cover)` $fm -}}
+    {{- $fkMatch := findRE `(title|author|year|doi|url|booktitle|journal|cover|eprint|archiveprefix)` $fm -}}
     {{- if $fkMatch -}}
       {{- $k := lower (index $fkMatch 0) -}}
-      {{- $v := replaceRE `(title|author|year|doi|url|booktitle|journal|cover)\s*=\s*\{` "" $fm -}}
+      {{- $v := replaceRE `(title|author|year|doi|url|booktitle|journal|cover|eprint|archiveprefix)\s*=\s*\{` "" $fm -}}
       {{- $v = trim $v "}" -}}
       {{- $v = trim $v " " -}}
       {{- if eq $k "title" }}{{- $title = $v -}}{{ end -}}
@@ -79,7 +82,16 @@
       {{- if eq $k "booktitle" }}{{- $booktitle = $v -}}{{ end -}}
       {{- if eq $k "journal" }}{{- $journal = $v -}}{{ end -}}
       {{- if eq $k "cover" }}{{- $cover = $v -}}{{ end -}}
+      {{- if eq $k "eprint" }}{{- $eprint = $v -}}{{ end -}}
+      {{- if eq $k "archiveprefix" }}{{- $archivePrefix = $v -}}{{ end -}}
     {{- end -}}
+  {{- end -}}
+
+  {{- /* Split authors by " and " (BibTeX separator) once, after field extraction,
+       so client-side JS can apply et al. rules from a clean array. */ -}}
+  {{- $authorsList := slice -}}
+  {{- if $author -}}
+    {{- $authorsList = split $author " and " -}}
   {{- end -}}
 
   {{- $venue := "" -}}
@@ -94,17 +106,33 @@
   {{- else if and $url (ne $url "") }}{{- $linkTarget = $url -}}
   {{- end -}}
 
+  {{- /* Derive the canonical arXiv ID: eprint wins over url-extracted. */ -}}
+  {{- $arxivId := "" -}}
+  {{- if and $eprint (ne $eprint "") -}}
+    {{- if eq (lower $archivePrefix) "arxiv" -}}
+      {{- $arxivId = $eprint -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if and (eq $arxivId "") $url -}}
+    {{- $m := findRESubmatch `arxiv\.org/(?:abs|pdf)/([a-zA-Z0-9._-]+(?:/[a-zA-Z0-9._-]+)?)` $url -}}
+    {{- if $m }}{{- $arxivId = index (index $m 0) 1 -}}{{ end -}}
+  {{- end -}}
+
   {{- $entries = $entries | append (dict
     "citekey" $citekey
     "type" $entryType
     "title" $title
     "author" $author
+    "authors" $authorsList
+    "authorsJson" ($authorsList | jsonify)
     "year" $year
     "yearInt" $yearInt
     "doi" $doi
     "url" $url
     "venue" $venue
     "cover" $cover
+    "eprint" $eprint
+    "arxiv" $arxivId
     "linkTarget" $linkTarget
   ) -}}
 {{- end -}}

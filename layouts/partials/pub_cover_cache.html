@@ -1,0 +1,113 @@
+{{/*
+  pub_cover_cache.html — site-wide IndexedDB cache for publication cover figures.
+
+  Key design (decided by user):
+    - publication = citekey (e.g. "li2026moeunet")
+    - figure      = image filename (e.g. "k_space_augment.png"), derived from
+                    the URL's last path segment so the key is stable across
+                    same-image re-serves (e.g. arXiv CDN variants of the same
+                    figure share the key).
+    - composite   = "<citekey>::<figure>"
+
+  Scope:
+    - Same-origin → automatically shared across all pages of the site (CV page,
+      project pages, future publication listings).
+    - Persists across browser restarts (unlike sessionStorage, which is per-tab).
+    - Bypasses per-tab sessionStorage completely: blobs are returned as object
+      URLs so the browser never re-fetches the figure even on a cold cache.
+
+  Exposes window.PubCoverCache with:
+    - ready:  Promise<void>                          — resolves when IDB is open
+    - get(publication, figure): Promise<Blob|null>   — null on miss
+    - put(publication, figure, blob): Promise<void>  — no-op on quota errors
+
+  Failure policy:
+    - IDB unavailable / blocked / throws → all methods reject; callers should
+      treat that as a cache miss and fall through to network.
+*/}}
+
+<script>
+(function () {
+  var DB_NAME = 'pubCoverCache';
+  var DB_VERSION = 1;
+  var STORE = 'figures';
+  var KEY_SEP = '::';
+
+  function deriveFigureName(url) {
+    if (!url) return null;
+    try {
+      var u = new URL(url, window.location.href);
+      var path = u.pathname;
+      var last = path.substring(path.lastIndexOf('/') + 1);
+      if (!last) return null;
+      // strip query string if any survived URL parsing (it shouldn't, but be safe)
+      var qi = last.indexOf('?');
+      if (qi !== -1) last = last.substring(0, qi);
+      return last || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function openDb() {
+    return new Promise(function (resolve, reject) {
+      if (typeof indexedDB === 'undefined') {
+        reject(new Error('indexedDB unavailable'));
+        return;
+      }
+      var req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE);
+        }
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error || new Error('IDB open failed')); };
+      req.onblocked = function () { reject(new Error('IDB blocked by another tab')); };
+    });
+  }
+
+  var dbPromise = null;
+  function db() {
+    if (!dbPromise) dbPromise = openDb();
+    return dbPromise;
+  }
+
+  function key(publication, figure) {
+    return publication + KEY_SEP + figure;
+  }
+
+  function get(publication, figure) {
+    if (!publication || !figure) return Promise.resolve(null);
+    return db().then(function (d) {
+      return new Promise(function (resolve, reject) {
+        var tx = d.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).get(key(publication, figure));
+        req.onsuccess = function () { resolve(req.result || null); };
+        req.onerror = function () { reject(req.error); };
+      });
+    });
+  }
+
+  function put(publication, figure, blob) {
+    if (!publication || !figure || !(blob instanceof Blob)) return Promise.resolve();
+    return db().then(function (d) {
+      return new Promise(function (resolve, reject) {
+        var tx = d.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(blob, key(publication, figure));
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { reject(tx.error); };
+        tx.onabort = function () { reject(tx.error || new Error('IDB tx aborted')); };
+      });
+    });
+  }
+
+  window.PubCoverCache = {
+    ready: db().then(function () { return; }),
+    get: get,
+    put: put,
+    deriveFigureName: deriveFigureName
+  };
+})();
+</script>

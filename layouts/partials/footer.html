@@ -35,7 +35,9 @@
 {{- partial "extend_footer.html" . }}
 
 {{- partial "reading_progress.html" . -}}
+{{- partial "pub_cover_cache.html" . -}}
 {{- partial "publication_covers.html" . -}}
+{{- partial "publication_authors.html" . -}}
 
 
     <!-- Image float preview: show full image in a floating layer on hover/focus -->
@@ -61,6 +63,15 @@
     ;(function(){
         // include cover images and figure-based renders too
         const selector = '.post-content img, .md-content img, .post-single .entry-cover img, .entry-cover img, figure.entry-cover img';
+        // Helper: does this image match the selector AND is NOT inside a
+        // publication card cover? Publication card covers use object-fit:cover
+        // with a fixed 16:9 aspect — the full image is intentionally cropped,
+        // so the hover-float preview would be misleading.
+        function shouldHandle(img) {
+            if (!img || !img.matches || !img.matches(selector)) return false;
+            if (img.closest && img.closest('.pub-cover')) return false;
+            return true;
+        }
         // If running on a coarse/touch pointer device (mobile), disable this interaction entirely
         const isCoarse = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || ('ontouchstart' in window);
         if (isCoarse) return;
@@ -203,13 +214,13 @@
         // use pointerover/out (bubble) for broader compatibility on desktop
         document.addEventListener('pointerover', function(e){
             const img = e.target.closest && e.target.closest('img');
-            if (!img) return; if (!img.matches(selector)) return;
+            if (!shouldHandle(img)) return;
             makeOverlay(img, {mode: 'hover'});
         });
 
         document.addEventListener('pointerout', function(e){
             const img = e.target.closest && e.target.closest('img');
-            if (!img) return; if (!img.matches(selector)) return;
+            if (!shouldHandle(img)) return;
             if (scrollGraceActive) return;
             if (overlayMode === 'focus') return;
             if (overlayMode === 'hover') return;
@@ -235,7 +246,7 @@
         // Use pointerdown/pointerup for touch and mouse presses (broad support)
         document.addEventListener('pointerdown', function(e){
             const img = e.target.closest && e.target.closest('img');
-            if (!img) return; if (!img.matches(selector)) return;
+            if (!shouldHandle(img)) return;
             if (overlay && overlaySource === img && overlayMode !== 'press') {
                 // Keep the current expanded image focused; do not let a click steal focus/blur it.
                 e.preventDefault();
@@ -258,12 +269,12 @@
         // keyboard accessibility: focus/blur
         document.addEventListener('focusin', function(e){
             const img = e.target.closest && e.target.closest('img');
-            if (!img) return; if (!img.matches(selector)) return;
+            if (!shouldHandle(img)) return;
             makeOverlay(img, {mode: 'focus'});
         });
         document.addEventListener('focusout', function(e){
             const img = e.target.closest && e.target.closest('img');
-            if (!img) return; if (!img.matches(selector)) return;
+            if (!shouldHandle(img)) return;
             if (overlayMode === 'press') return;
             destroyOverlay();
         });
@@ -337,3 +348,20 @@
     })
 </script>
 {{- end }}
+
+{{- /* Publication card mobile: per-container viewport-width probe.
+       Independent of CV's data-app-mode. CSS uses OR-semantics:
+       either html[data-app-mode="mobile"] OR .publications-list.pub-mobile
+       triggers the mobile (vertical) layout. */ -}}
+<script>
+;(function(){
+    function applyPubMobile() {
+        var isMobile = window.innerWidth < 768;
+        document.querySelectorAll('.publications-list').forEach(function (list) {
+            list.classList.toggle('pub-mobile', isMobile);
+        });
+    }
+    applyPubMobile();
+    window.addEventListener('resize', applyPubMobile, { passive: true });
+})();
+</script>

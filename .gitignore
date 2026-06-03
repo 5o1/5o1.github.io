@@ -22,3 +22,19 @@ node_modules/
 # Environment
 .env
 .env.local
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+# Playwright scaffolding: only used via MCP for ad-hoc debugging, not
+# committed to the project (no CI runs these). Keep on disk for Claude
+# sessions; ignore from VCS.
+playwright.config.js
+/tests/
+.github/workflows/playwright.yml
+
+# Claude Code dev tooling
+.mcp.json

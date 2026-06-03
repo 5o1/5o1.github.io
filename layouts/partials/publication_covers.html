@@ -1,96 +1,518 @@
 {{/*
-  publication_covers.html — injected via extend_footer to populate cover images
-  for publication cards. Tries manual cover > JS fetch > default cover > placeholder.
+  publication_covers.html — populates cover images for publication cards.
+
+  Architecture (5 layers, single responsibility each):
+    1. Caches         — sessionStorage (URL list) + IDB (blobs)
+    2. Image loading  — loadImage(), measureBlob()
+    3. Blob/Text fetch — fetchAsText(), fetchAsBlob(), fetchBlob()
+    4. Site handlers  — arxiv/ar5iv HTML scrape → figure Refs
+    5. Render         — renderSingle(), renderCarousel(), renderPlaceholder()
+
+  One orchestrator (resolveCover) chains them. No WeakMap, no magic
+  strings, no setTimeout safety nets.
+
+  Resolution order per card:
+    0. manual cover (data-manual-cover)        → single image, no carousel
+    1. default cover (data-default-cover)      → shown immediately as placeholder
+    2. site handler (arxiv/ar5iv HTML scrape)  → figure refs
+    3. generic og:image scrape (data-url)      → fallback for unknown sites
+    4. sessionStorage cache (per primary key)  → skip scraping on subsequent loads
+    5. probe via fetchBlob + measureBlob       → keep refs that fit the size threshold
+
+  Per-image lookup order (parallel across candidates):
+    A. IDB cache (window.PubCoverCache) — no network at all
+    B. fetch via direct URL, then weserv.nl proxy on CORS failure
+    C. write back to IDB on success
 */}}
 
 <script>
 (function () {
-  function initPublicationCovers() {
-    var covers = document.querySelectorAll('.pub-cover[data-citekey]');
-    if (!covers.length) return;
+  'use strict';
 
-    function setCover(el, src, alt) {
-      var img = document.createElement('img');
+  // ====================================================================
+  // Configuration
+  // ====================================================================
+  const MIN_W = 200;
+  const MIN_H = 120;
+  const TIMEOUT_MS = 8000;
+  const CYCLE_MS = 5000;
+  const SESSION_PREFIX = 'pubCovers:';
+
+  // CORS proxies for HTML scraping (in order of preference).
+  // Direct fetch is tried first; proxies are fallback.
+  const TEXT_PROXIES = [
+    'https://corsproxy.io/?url=',
+    'https://api.allorigins.win/raw?url='
+  ];
+
+  const reducedMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ====================================================================
+  // Layer 1: Caches
+  // ====================================================================
+  // sessionStorage: pubCovers:<primary> → JSON [refs]
+  //   - empty array  = negative cache ("we tried, no figures")
+  //   - missing      = not yet queried
+  // IDB: provided by pub_cover_cache.html partial as window.PubCoverCache
+
+  function sessionGetRefs(primary) {
+    try {
+      const raw = sessionStorage.getItem(SESSION_PREFIX + primary);
+      if (raw === null) return { hit: false, refs: null };
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return { hit: false, refs: null };
+      return { hit: true, refs: parsed };
+    } catch (e) {
+      return { hit: false, refs: null };
+    }
+  }
+
+  function sessionPutRefs(primary, refs) {
+    try {
+      sessionStorage.setItem(SESSION_PREFIX + primary, JSON.stringify(refs));
+    } catch (e) { /* quota or disabled */ }
+  }
+
+  async function idbGetBlob(citekey, figure) {
+    const cache = window.PubCoverCache;
+    if (!cache || !citekey || !figure) return null;
+    try { return await cache.get(citekey, figure); } catch (e) { return null; }
+  }
+
+  function idbPutBlob(citekey, figure, blob) {
+    const cache = window.PubCoverCache;
+    if (!cache || !citekey || !figure || !(blob instanceof Blob)) return;
+    cache.put(citekey, figure, blob).catch(function () {});
+  }
+
+  // ====================================================================
+  // Layer 2: Image loading
+  // ====================================================================
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      const img = new Image();
+      img.onload  = function () { resolve(img); };
+      img.onerror = function () { reject(new Error('image load failed')); };
       img.src = src;
-      img.alt = alt || '';
-      img.loading = 'lazy';
-      img.onload = function () {
-        el.classList.add('pub-cover--loaded');
-      };
-      img.onerror = function () {
-        if (img.parentNode === el) el.removeChild(img);
-      };
-      // Don't clear el.innerHTML — keep the inline placeholder span as
-      // a fallback so the cover is never empty if the img fails or
-      // its onload doesn't fire (e.g. cache hit).
-      el.appendChild(img);
-      // Cached images may not fire onload synchronously.
-      if (img.complete && img.naturalWidth > 0) {
-        el.classList.add('pub-cover--loaded');
-      }
-    }
-
-    function tryFetchOgImage(url, el, title, onSuccess) {
-      var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      var settled = false;
-      var finish = function (fn) { if (!settled) { settled = true; fn(); } };
-      var timer = setTimeout(function () { finish(function () {}); }, 3000);
-      fetch(proxyUrl)
-        .then(function (resp) { return resp.text(); })
-        .then(function (html) {
-          var match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-          clearTimeout(timer);
-          if (match && match[1]) {
-            finish(function () { setCover(el, match[1], title); });
-          } else {
-            finish(function () {});
-          }
-        })
-        .catch(function () {
-          clearTimeout(timer);
-          finish(function () {});
-        });
-    }
-
-    function applyCover(el) {
-      var manualCover = el.getAttribute('data-manual-cover');
-      var defaultCover = el.getAttribute('data-default-cover');
-      var doi = el.getAttribute('data-doi');
-      var url = el.getAttribute('data-url');
-      var title = el.getAttribute('data-title');
-
-      // 1. Manual cover from bib field
-      if (manualCover) {
-        setCover(el, manualCover, title);
-        return;
-      }
-
-      // 2. Show default cover immediately so the card is never blank,
-      //    even when og-image fetch hangs or fails.
-      if (defaultCover) {
-        setCover(el, defaultCover, title);
-      } else {
-        el.classList.add('pub-cover--placeholder');
-      }
-
-      // 3. Try to upgrade with DOI OG image, then URL OG image.
-      if (doi) {
-        tryFetchOgImage('https://doi.org/' + doi, el, title);
-      }
-      if (url) {
-        tryFetchOgImage(url, el, title);
-      }
-    }
-
-    covers.forEach(function (el) {
-      applyCover(el);
     });
   }
 
+  async function measureBlob(blob) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = await loadImage(url);
+      return { w: img.naturalWidth, h: img.naturalHeight };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  // ====================================================================
+  // Layer 3: Blob / Text fetching
+  // ====================================================================
+
+  function viaImageCorsProxy(url) {
+    const bare = url.replace(/^https?:\/\//, '');
+    return 'https://images.weserv.nl/?url=' + encodeURIComponent(bare);
+  }
+
+  function makeTimeoutSignal(ms) {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      return AbortSignal.timeout(ms);
+    }
+    // Fallback for older browsers
+    const c = new AbortController();
+    setTimeout(function () { c.abort(); }, ms);
+    return c.signal;
+  }
+
+  async function fetchAsText(url) {
+    // Try direct first, then each CORS proxy in order.
+    const sources = [url].concat(TEXT_PROXIES.map(function (p) {
+      return p + encodeURIComponent(url);
+    }));
+    let lastErr = null;
+    for (const src of sources) {
+      try {
+        const r = await fetch(src, { signal: makeTimeoutSignal(TIMEOUT_MS) });
+        if (r.ok) return await r.text();
+        lastErr = new Error('HTTP ' + r.status);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('fetch text failed');
+  }
+
+  async function fetchAsBlob(url) {
+    const r = await fetch(url, { signal: makeTimeoutSignal(TIMEOUT_MS) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    if (blob.size === 0) throw new Error('empty body');
+    return blob;
+  }
+
+  // Try each URL in ref.urlsToTry in order; first success wins.
+  // Returns null if all fail. Never throws.
+  async function fetchBlob(ref) {
+    for (const url of ref.urlsToTry) {
+      try {
+        return await fetchAsBlob(url);
+      } catch (e) { /* try next */ }
+    }
+    return null;
+  }
+
+  // ====================================================================
+  // Layer 4: Site Handlers
+  // ====================================================================
+
+  function extractFigureUrls(html, base) {
+    const urls = [];
+    const seen = new Set();
+    function add(u) {
+      if (u && !seen.has(u)) { seen.add(u); urls.push(u); }
+    }
+    // og:image
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+    if (og) {
+      try { add(new URL(og[1], base).href); } catch (e) { /* bad URL */ }
+    }
+    // <figure><img>
+    const figRe = /<figure[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/gi;
+    let m;
+    while ((m = figRe.exec(html)) !== null) {
+      try { add(new URL(m[1], base).href); } catch (e) { /* bad URL */ }
+    }
+    return urls;
+  }
+
+  // URL-level heuristic filter: drop favicons, site chrome, etc.
+  function urlHeuristic(u) {
+    const low = u.toLowerCase();
+    if (low.indexOf('/icons/') !== -1) return false;
+    if (low.indexOf('favicon') !== -1) return false;
+    if (low.indexOf('.svg') !== -1 && low.indexOf('figure') === -1) return false;
+    if (low.indexOf('/assets/ar5iv') !== -1) return false;
+    if (/ar5iv\.labs\.arxiv\.org\/assets\//.test(low)) return false;
+    if (/arxiv\.org\/static\//.test(low)) return false;
+    // Inline data: URLs are almost always 1×1 og:image placeholders (e.g.
+    // arxiv.org's HTML head serves a transparent PNG as og:image). They'd
+    // "fetch" fine but render as empty boxes, and would block the
+    // arxiv→ar5iv fallback if anything else fails.
+    if (u.indexOf('data:') === 0) return false;
+    return true;
+  }
+
+  // Build a Ref. Strategy declares CORS behavior:
+  //   'arxiv'  — direct often works (CORS enabled), proxy is fallback
+  //   'ar5iv'  — direct never works (no CORS), proxy is primary
+  //   'og'     — generic, try direct first
+  function makeRef(url, strategy) {
+    const proxyUrl = viaImageCorsProxy(url);
+    return {
+      url: url,
+      proxyUrl: proxyUrl,
+      strategy: strategy,
+      urlsToTry: strategy === 'ar5iv' ? [proxyUrl, url] : [url, proxyUrl]
+    };
+  }
+
+  const ARXIV_HANDLER = {
+    name: 'arxiv',
+    match: function (card) { return !!card.arxivId; },
+
+    // Returns Array<{ref, blob}> — viable candidates after the full
+    // arxiv.org → ar5iv fallback chain. Each ref has been confirmed
+    // fetchable (via IDB or direct fetch). Empty array = give up.
+    //
+    // Why the chain lives in the handler: arxiv.org HTML sometimes lists
+    // figure URLs that 404 on arxiv.org's own server (the figures only
+    // exist on ar5iv). The handler needs to detect this and fall back
+    // — that's site-specific knowledge the orchestrator doesn't have.
+    async getCandidates(card) {
+      const arxivRefs  = await scrapeArxivSource('https://arxiv.org/html/'           + card.arxivId, 'arxiv');
+      const arxivCand  = await filterViableRefs(arxivRefs, card);
+      if (arxivCand.length > 0) return arxivCand;
+
+      const ar5ivRefs  = await scrapeArxivSource('https://ar5iv.labs.arxiv.org/html/' + card.arxivId, 'ar5iv');
+      return filterViableRefs(ar5ivRefs, card);
+    }
+  };
+
+  // Scrape one source for figure URLs. Never throws.
+  async function scrapeArxivSource(url, strategy) {
+    try {
+      const html = await fetchAsText(url);
+      return extractFigureUrls(html, url)
+        .filter(urlHeuristic)
+        .map(function (u) { return makeRef(u, strategy); });
+    } catch (e) { return []; }
+  }
+
+  // For each ref: IDB lookup → fetch → return {ref, blob} or null.
+  // Used both by the handler (for its fallback chain) and by the
+  // orchestrator (when hydrating from sessionStorage cache).
+  async function filterViableRefs(refs, card) {
+    const cache = window.PubCoverCache;
+    const tasks = refs.map(async function (ref) {
+      const figure = cache && cache.deriveFigureName(ref.url);
+      let blob = await idbGetBlob(card.citekey, figure);
+      if (!blob) {
+        blob = await fetchBlob(ref);
+        if (blob) idbPutBlob(card.citekey, figure, blob);
+      }
+      return blob ? { ref: ref, blob: blob } : null;
+    });
+    return (await Promise.all(tasks)).filter(Boolean);
+  }
+
+  // Generic OG-image scrape for unknown sites / DOI.
+  async function getOgRefs(url) {
+    try {
+      const html = await fetchAsText(url);
+      const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      if (m) {
+        let abs = m[1];
+        try { abs = new URL(m[1], url).href; } catch (e) { /* keep raw */ }
+        if (urlHeuristic(abs)) return [makeRef(abs, 'og')];
+      }
+    } catch (e) { /* give up */ }
+    return [];
+  }
+
+  // ====================================================================
+  // Layer 5: Rendering
+  // ====================================================================
+
+  function clearImages(el) {
+    const imgs = el.querySelectorAll('img');
+    for (let i = 0; i < imgs.length; i++) imgs[i].remove();
+  }
+
+  function revokeLater(url, ms) {
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, ms || 30000);
+  }
+
+  function renderSingle(card, blob) {
+    clearImages(card.el);
+    card.el.classList.remove('pub-cover--placeholder', 'pub-cover--carousel');
+    card.el.classList.add('pub-cover--loaded');
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.src = url;
+    img.alt = card.title;
+    img.loading = 'eager';
+    img.addEventListener('load', function () { revokeLater(url); }, { once: true });
+    card.el.appendChild(img);
+  }
+
+  function renderCarousel(card, candidates) {
+    clearImages(card.el);
+    card.el.classList.remove('pub-cover--placeholder');
+    card.el.classList.add('pub-cover--carousel', 'pub-cover--loaded');
+
+    const imgs = candidates.map(function (c, i) {
+      const url = URL.createObjectURL(c.blob);
+      const img = new Image();
+      img.src = url;
+      img.alt = card.title;
+      img.loading = i === 0 ? 'eager' : 'lazy';
+      img.style.opacity = i === 0 ? '1' : '0';
+      img.setAttribute('data-carousel-idx', String(i));
+      img.addEventListener('load', function () { revokeLater(url); }, { once: true });
+      card.el.appendChild(img);
+      return img;
+    });
+
+    if (imgs.length < 2 || reducedMotion) return;
+
+    // Single source of truth for "is paused": the card's data attribute.
+    const setPaused = function (v) {
+      card.el.dataset.carouselPaused = v ? '1' : '0';
+      card.el.classList.toggle('pub-cover--paused', !!v);
+    };
+    setPaused(document.hidden);
+
+    let idx = 0;
+    const advance = function () {
+      if (card.el.dataset.carouselPaused === '1') return;
+      if (!imgs.length) return;
+      idx = (idx + 1) % imgs.length;
+      for (const img of imgs) {
+        img.style.opacity = (parseInt(img.getAttribute('data-carousel-idx'), 10) === idx) ? '1' : '0';
+      }
+    };
+    setInterval(advance, CYCLE_MS);
+
+    card.el.addEventListener('mouseenter', function () { setPaused(true);  });
+    card.el.addEventListener('mouseleave', function () { setPaused(false); });
+    card.el.addEventListener('focusin',    function () { setPaused(true);  });
+    card.el.addEventListener('focusout',   function () { setPaused(false); });
+    document.addEventListener('visibilitychange', function () { setPaused(document.hidden); });
+  }
+
+  function renderDefaultPlaceholder(card) {
+    // Just append an <img> with the default src — browser handles loading.
+    // No blob fetch (would be wasteful for a fallback).
+    clearImages(card.el);
+    card.el.classList.remove('pub-cover--carousel');
+    card.el.classList.add('pub-cover--loaded');
+    const img = new Image();
+    img.src = card.defaultCover;
+    img.alt = card.title;
+    img.loading = 'eager';
+    card.el.appendChild(img);
+  }
+
+  function renderEmptyPlaceholder(card) {
+    card.el.classList.remove('pub-cover--carousel', 'pub-cover--loaded');
+    card.el.classList.add('pub-cover--placeholder');
+  }
+
+  // ====================================================================
+  // Card data extraction
+  // ====================================================================
+
+  function readCardData(el) {
+    return {
+      el:           el,
+      citekey:      el.getAttribute('data-citekey') || '',
+      title:        el.getAttribute('data-title') || '',
+      manualCover:  el.getAttribute('data-manual-cover') || null,
+      defaultCover: el.getAttribute('data-default-cover') || null,
+      arxivId:      (el.getAttribute('data-arxiv') || '').trim() || null,
+      url:          el.getAttribute('data-url') || null,
+      doi:          el.getAttribute('data-doi') || null
+    };
+  }
+
+  // ====================================================================
+  // Orchestrator
+  // ====================================================================
+
+  // Try the manual cover (if any). Returns true on success.
+  async function tryManualCover(card) {
+    if (!card.manualCover) return false;
+    const blob = await fetchAsBlob(card.manualCover).catch(function () { return null; });
+    if (blob) {
+      renderSingle(card, blob);
+      return true;
+    }
+    return false;
+  }
+
+  // Gather viable candidates for this card.
+  //   Returns Array<{ref, blob}> — each ref has been confirmed fetchable.
+  //   Empty array = no figures available; orchestrator falls back to default.
+  //
+  // sessionStorage caches the URLs (not blobs). On hit we re-filter by
+  // viability: if a previously-cached URL is now dead, it drops out and
+  // the user sees the default cover. (Re-tries the handler on the next
+  // page load only if sessionStorage is cleared.)
+  async function gatherCandidates(card) {
+    const primary = primaryKey(card);
+    if (!primary) return [];
+
+    const cached = sessionGetRefs(primary);
+    if (cached.hit) {
+      return filterViableRefs(cached.refs, card);
+    }
+
+    let candidates = [];
+    if (card.arxivId) {
+      candidates = await ARXIV_HANDLER.getCandidates(card);
+    } else {
+      // OG fallback for non-arxiv cards
+      const target = primary.slice('og:'.length);
+      const refs = await getOgRefs(target);
+      sessionPutRefs(primary, refs);
+      candidates = await filterViableRefs(refs, card);
+    }
+
+    // Cache the URLs we ended up using (or empty array = negative cache)
+    const refsForCache = candidates.length > 0
+      ? candidates.map(function (c) { return c.ref; })
+      : [];
+    sessionPutRefs(primary, refsForCache);
+    return candidates;
+  }
+
+  function primaryKey(card) {
+    if (card.arxivId) return 'arxiv:' + card.arxivId;
+    if (card.url)     return 'og:'    + card.url;
+    if (card.doi)     return 'og:https://doi.org/' + card.doi;
+    return null;
+  }
+
+  // Filter candidates by image size. Blob already fetched.
+  // Returns Array<{ref, blob, dims}>.
+  async function filterBySize(candidates) {
+    const results = await Promise.all(candidates.map(async function (c) {
+      let dims;
+      try { dims = await measureBlob(c.blob); } catch (e) { return null; }
+      if (dims.w < MIN_W || dims.h < MIN_H) return null;
+      return { ref: c.ref, blob: c.blob, dims: dims };
+    }));
+    return results.filter(Boolean);
+  }
+
+  // Main orchestrator. One async flow per card. No shared state.
+  async function resolveCover(card) {
+    // 0. Manual cover short-circuits
+    if (await tryManualCover(card)) return;
+
+    // 1. Render the default cover immediately so the card isn't blank.
+    //    It will be replaced if we find better candidates.
+    if (card.defaultCover) {
+      renderDefaultPlaceholder(card);
+    } else {
+      renderEmptyPlaceholder(card);
+    }
+
+    // 2. Gather viable candidates (handler does its own fallback chain)
+    let candidates = [];
+    try {
+      candidates = await gatherCandidates(card);
+    } catch (e) {
+      // site handler blew up; fall through
+    }
+
+    if (candidates.length === 0) return;  // keep default / placeholder
+
+    // 3. Filter by size (probe = render: same blob, same dimensions)
+    const good = await filterBySize(candidates);
+    if (good.length === 0) return;  // keep default / placeholder
+
+    // 4. Render
+    if (good.length === 1) {
+      renderSingle(card, good[0].blob);
+    } else {
+      renderCarousel(card, good);
+    }
+  }
+
+  // ====================================================================
+  // Init
+  // ====================================================================
+
+  function init() {
+    const covers = document.querySelectorAll('.pub-cover[data-citekey]');
+    if (!covers.length) return;
+    for (const el of covers) {
+      const card = readCardData(el);
+      resolveCover(card).catch(function (err) {
+        if (window.console) console.error('cover resolve failed:', card.citekey, err);
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPublicationCovers);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    initPublicationCovers();
+    init();
   }
 })();
 </script>
