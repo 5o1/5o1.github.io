@@ -5,7 +5,7 @@
     1. Caches         — sessionStorage (URL list) + IDB (blobs)
     2. Image loading  — loadImage(), measureBlob()
     3. Blob/Text fetch — fetchAsText(), fetchAsBlob(), fetchBlob()
-    4. Site handlers  — arxiv/ar5iv HTML scrape → figure Refs
+    4. Site handlers  — arxiv.org HTML scrape → figure Refs
     5. Render         — renderSingle(), renderCarousel(), renderPlaceholder()
 
   One orchestrator (resolveCover) chains them. No WeakMap, no magic
@@ -14,7 +14,7 @@
   Resolution order per card:
     0. manual cover (data-manual-cover)        → single image, no carousel
     1. default cover (data-default-cover)      → shown immediately as placeholder
-    2. site handler (arxiv/ar5iv HTML scrape)  → figure refs
+    2. site handler (arxiv.org HTML scrape)    → figure refs
     3. generic og:image scrape (data-url)      → fallback for unknown sites
     4. sessionStorage cache (per primary key)  → skip scraping on subsequent loads
     5. probe via fetchBlob + measureBlob       → keep refs that fit the size threshold
@@ -23,6 +23,15 @@
     A. IDB cache (window.PubCoverCache) — no network at all
     B. fetch via direct URL, then weserv.nl proxy on CORS failure
     C. write back to IDB on success
+
+  Why we read <base href> from arxiv HTML: per WHATWG URL Standard,
+  the browser resolves every relative URL in a page against the base
+  URL — which is the document URL unless the HTML declares a
+  <base href="..."> tag. arxiv.org's HTML uses <base> for some papers
+  (e.g. 2512.20330 sets <base href="/html/2512.20330v1/">) and omits
+  it for others (e.g. 2606.01784). Without reading <base>, our
+  relative-path resolution diverges from the browser's and figures
+  that work in a real browser 404 when we fetch them directly.
 */}}
 
 <script>
@@ -169,7 +178,22 @@
   // Layer 4: Site Handlers
   // ====================================================================
 
-  function extractFigureUrls(html, base) {
+  // Resolve a relative URL against the document's base URL.
+  // The HTML's <base href="..."> overrides the document URL per the HTML
+  // spec, so we must read it first. arxiv.org's HTML uses <base> for
+  // some papers (e.g. 2512.20330 sets <base href="/html/2512.20330v1/">)
+  // and omits it for others (e.g. 2606.01784 uses absolute-ish relative
+  // paths like "2606.01784v1/fig.png" that resolve against the document).
+  function resolveBaseUrl(html, documentUrl) {
+    const m = html.match(/<base[^>]+href=["']([^"']+)["']/i);
+    if (m && m[1]) {
+      try { return new URL(m[1], documentUrl).href; } catch (e) { /* fall through */ }
+    }
+    return documentUrl;
+  }
+
+  function extractFigureUrls(html, documentUrl) {
+    const base = resolveBaseUrl(html, documentUrl);
     const urls = [];
     const seen = new Set();
     function add(u) {
@@ -180,10 +204,13 @@
     if (og) {
       try { add(new URL(og[1], base).href); } catch (e) { /* bad URL */ }
     }
-    // <figure><img>
-    const figRe = /<figure[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/gi;
+    // All <img src> — urlHeuristic drops chrome (logos, favicons, data: URLs).
+    // A <figure>-only regex misses images that arxiv.org's LaTeXML lays out
+    // as <figure><div><img></div><div><img></div>… because the non-greedy
+    // [\s\S]*? only captures the first <img> per <figure>.
+    const imgRe = /<img[^>]+src=["']([^"']+)["']/gi;
     let m;
-    while ((m = figRe.exec(html)) !== null) {
+    while ((m = imgRe.exec(html)) !== null) {
       try { add(new URL(m[1], base).href); } catch (e) { /* bad URL */ }
     }
     return urls;
