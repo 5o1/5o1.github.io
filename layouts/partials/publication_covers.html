@@ -61,8 +61,12 @@
   // Layer 1: Caches
   // ====================================================================
   // sessionStorage: pubCovers:<primary> → JSON [refs]
-  //   - empty array  = negative cache ("we tried, no figures")
-  //   - missing      = not yet queried
+  //   - present (non-empty)  = cache hit, reuse URLs (blobs refetched per fig)
+  //   - empty array or miss  = cache miss, re-scrape
+  // We deliberately do NOT keep a negative cache: if a previous attempt
+  // returned no figures (transient network failure, arxiv HTML was
+  // temporarily broken, etc.) the next page load re-tries. The arxiv
+  // fetch path itself is fast and idempotent.
   // IDB: provided by pub_cover_cache.html partial as window.PubCoverCache
 
   function sessionGetRefs(primary) {
@@ -70,7 +74,7 @@
       const raw = sessionStorage.getItem(SESSION_PREFIX + primary);
       if (raw === null) return { hit: false, refs: null };
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return { hit: false, refs: null };
+      if (!Array.isArray(parsed) || parsed.length === 0) return { hit: false, refs: null };
       return { hit: true, refs: parsed };
     } catch (e) {
       return { hit: false, refs: null };
@@ -435,10 +439,12 @@
   //   Returns Array<{ref, blob}> — each ref has been confirmed fetchable.
   //   Empty array = no figures available; orchestrator falls back to default.
   //
-  // sessionStorage caches the URLs (not blobs). On hit we re-filter by
-  // viability: if a previously-cached URL is now dead, it drops out and
-  // the user sees the default cover. (Re-tries the handler on the next
-  // page load only if sessionStorage is cleared.)
+  // sessionStorage caches the URLs (not blobs) for the lifetime of the tab.
+  // On hit we re-filter by viability: if a previously-cached URL is now
+  // dead, it drops out and the user sees the default cover. On a miss
+  // (or an empty stored array — we don't keep a negative cache) we
+  // re-scrape the source. The arxiv fetch path is fast and idempotent,
+  // so transient failures self-heal on the next page load.
   async function gatherCandidates(card) {
     const primary = primaryKey(card);
     if (!primary) return [];
@@ -448,23 +454,24 @@
       return filterViableRefs(cached.refs, card);
     }
 
-    let candidates = [];
+    // Miss: scrape the source.
+    let refs = [];
     if (card.arxivId) {
-      candidates = await ARXIV_HANDLER.getCandidates(card);
+      const candidates = await ARXIV_HANDLER.getCandidates(card);
+      refs = candidates.map(function (c) { return c.ref; });
     } else {
       // OG fallback for non-arxiv cards
       const target = primary.slice('og:'.length);
-      const refs = await getOgRefs(target);
-      sessionPutRefs(primary, refs);
-      candidates = await filterViableRefs(refs, card);
+      refs = await getOgRefs(target);
     }
 
-    // Cache the URLs we ended up using (or empty array = negative cache)
-    const refsForCache = candidates.length > 0
-      ? candidates.map(function (c) { return c.ref; })
-      : [];
-    sessionPutRefs(primary, refsForCache);
-    return candidates;
+    // Cache only when we have something. An empty result on this page
+    // means a transient failure (e.g. arxiv was unreachable); the next
+    // page load will re-scrape instead of trusting the empty cache.
+    if (refs.length > 0) {
+      sessionPutRefs(primary, refs);
+    }
+    return filterViableRefs(refs, card);
   }
 
   function primaryKey(card) {
