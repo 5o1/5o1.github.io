@@ -318,13 +318,23 @@
   // Layer 5: Rendering
   // ====================================================================
 
+  // Object-URL lifecycle: we create a blob: URL for every rendered image.
+  // We do NOT revoke on a timer. Safari/WebKit blanks out an <img> whose
+  // blob URL is revoked while the <img> is still in the DOM, which broke
+  // the carousel ~30 s after page load. Chrome/Firefox tolerate it; we
+  // don't want to depend on that. Instead we track each URL on its own
+  // <img> via dataset.objectUrl and revoke in clearImages (called at
+  // the start of every render). Page-unload cleanup is left to the
+  // browser — the blobs are also in IDB so they survive reloads.
   function clearImages(el) {
     const imgs = el.querySelectorAll('img');
-    for (let i = 0; i < imgs.length; i++) imgs[i].remove();
-  }
-
-  function revokeLater(url, ms) {
-    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, ms || 30000);
+    for (let i = 0; i < imgs.length; i++) {
+      const u = imgs[i].dataset.objectUrl;
+      if (u) {
+        try { URL.revokeObjectURL(u); } catch (e) { /* already revoked */ }
+      }
+      imgs[i].remove();
+    }
   }
 
   function renderSingle(card, blob) {
@@ -336,7 +346,7 @@
     img.src = url;
     img.alt = card.title;
     img.loading = 'eager';
-    img.addEventListener('load', function () { revokeLater(url); }, { once: true });
+    img.dataset.objectUrl = url;
     card.el.appendChild(img);
   }
 
@@ -353,7 +363,7 @@
       img.loading = i === 0 ? 'eager' : 'lazy';
       img.style.opacity = i === 0 ? '1' : '0';
       img.setAttribute('data-carousel-idx', String(i));
-      img.addEventListener('load', function () { revokeLater(url); }, { once: true });
+      img.dataset.objectUrl = url;
       card.el.appendChild(img);
       return img;
     });
