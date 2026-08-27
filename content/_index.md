@@ -46,7 +46,7 @@ I am Yuyang Li (李雨阳 in Chinese), a Master's student at ShanghaiTech Univer
 
 ## Education
 
-* **2023.09 – Present** | **M.S. in Biomedical Engineering, ShanghaiTech University**, HuLab.
+* **2023.09 – 2026.07** | **M.S. in Biomedical Engineering, ShanghaiTech University**, Advisor: [Prof. Peng Hu](https://bme.shanghaitech.edu.cn/bme_en/2021/0205/c8252a686960/page.htm).
   * *Overall GPA:* 3.74/4.0 | *Major GPA:* 3.8/4.0
   * *Thesis title:* Research on Deep Learning-Based MRI Reconstruction Methods for Complex Heterogeneous Data Distributions.
 
